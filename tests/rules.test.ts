@@ -16,15 +16,17 @@ for (const programme of ['comms', 'power']) {
 const result = generate(masters, SEED_ROSTER);
 const sheet = (id: string) => result.sheets.find((s) => s.staff.id === id)!;
 
-test('Asmaa Radi: courses, shares and weeks as on her sheet (mechanics course excluded — PDF only)', () => {
+test('Asmaa Radi: courses, shares and weeks as on her sheet (the mechanics course is remembered from her sheet)', () => {
   assert.deepEqual(sheet('asmaa-radi').courses.map((c) => `${c.name} | ${c.share} | ${c.weeks}`), [
     'مبادئ بث المعلومات (ELC 151) | 0.5 | 1 - 7',
     'رياضيات 3 (MAT 101) | 0.5 | 9 - 15',
     'الكترونيات الجوامد والنبائط (ELC 211) | 0.5 | 9 - 15',
     'الاتصالات التناظرية (ELC 351) | 0.5 | 9 - 15',
     'الاتصالات الرقمية (ELC 451) | 0.5 | 1 - 7',
+    'دوائر كهربية والكترونية (ELP 331 ) | 0.5 | 1 - 7',
   ]);
-  assert.equal(sheet('asmaa-radi').totals.teaching, 10);
+  // as on her sheet (this test loads comms + power only; the civil master adds a MAT 101 lecture)
+  assert.equal(sheet('asmaa-radi').totals.teaching, 12);
 });
 
 test('nobody is double-booked or placed on their secondment day by the rules', () => {
@@ -41,7 +43,7 @@ test('nobody is double-booked or placed on their secondment day by the rules', (
 test('a section is supervised by exactly one of its listed doctors', () => {
   const seen = new Map<string, string>();
   for (const s of result.sheets) {
-    for (const it of s.items.filter((x) => x.type === 'supervision')) {
+    for (const it of s.items.filter((x) => x.type === 'supervision' && x.sessionId)) {
       assert.equal(seen.has(it.sessionId!), false, `${it.text} given to ${seen.get(it.sessionId!)} and ${s.staff.name}`);
       seen.set(it.sessionId!, s.staff.name);
     }

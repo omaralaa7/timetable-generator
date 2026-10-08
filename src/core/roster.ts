@@ -1,4 +1,5 @@
 import { nameKey, normalize } from './normalize.ts';
+import { SEED_PRESETS } from './seedPresets.ts';
 import type { Rank, Session } from './types.ts';
 
 export interface Staff {
@@ -17,13 +18,28 @@ export interface Staff {
   /** Office / advising hours to start from (default 4 each); both grow until the minimum load is met. */
   officeHours?: number;
   advisingHours?: number;
+  /** Blocks this person keeps from term to term (see Preset). */
+  presets?: Preset[];
+}
+
+/**
+ * A remembered block of a person's week: where the committee put their office
+ * hours / advising / quality, or a lecture or lab from a programme whose master
+ * cannot be read yet (PDF only). Placed only where the masters leave the slot free.
+ */
+export interface Preset {
+  day: number;
+  slots: number[];
+  type: 'lecture' | 'supervision' | 'section' | 'office' | 'advising' | 'quality';
+  text: string;
+  /** Row for the course table, for lectures from an unreadable master. */
+  course?: { key: string; name: string; share: number; weeks: string };
 }
 
 const COMMS = 'هندسة الاتصالات والالكترونيات';
 const POWER = 'هندسة القوى الكهربية';
 
-/** Seed roster from brief §6. Editable in the UI; this is only the starting point. */
-export const SEED_ROSTER: Staff[] = [
+const BASE: Staff[] = [
   { id: 'asmaa-radi', name: 'د/أسماء راضي', aliases: ['اسماء راضى', 'اسماء راضي'], programme: COMMS, rank: 'lecturer', advising: true, secondmentDay: 0, qualityHours: 2 },
   { id: 'ahmed-salem', name: 'د/أحمد ابراهيم سالم', aliases: ['احمد سالم', 'احمد ابراهيم سالم'], programme: COMMS, rank: 'lecturer', advising: true, secondmentDay: null, qualityHours: 2 },
   { id: 'mai-helmy', name: 'د/مي حلمي', aliases: ['مى حلمى', 'مي حلمي'], programme: COMMS, rank: 'lecturer', advising: true, secondmentDay: 4, qualityHours: 2 },
@@ -35,6 +51,19 @@ export const SEED_ROSTER: Staff[] = [
   { id: 'eman-awad', name: 'د/ايمان احمد عوض', aliases: ['ايمان عوض', 'ايمان احمد عوض'], programme: POWER, rank: 'lecturer', advising: true, secondmentDay: 5, qualityHours: 2 },
   { id: 'tamer-elsharkawy', name: 'م/تامر الشرقاوى', aliases: ['تامر الشرقاوى', 'تامر'], programme: POWER, rank: 'ta', advising: true, secondmentDay: null, qualityHours: 2 },
 ];
+
+// Office / advising / quality hours as on the hand-made sheets (brief §10).
+const HOURS: Record<string, [number, number, number]> = {
+  'asmaa-radi': [4, 4, 2], 'ahmed-salem': [4, 4, 2], 'mai-helmy': [5, 4, 2], 'hend-elsayed': [4, 4, 2],
+  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [5, 6, 5], 'mahmoud-elsadd': [6, 6, 4], 'gomaa-fahmy': [8, 1, 4],
+  'eman-awad': [6, 5, 2], 'tamer-elsharkawy': [0, 6, 5],
+};
+
+/** Seed roster from brief §6 and the hand-made sheets. Editable in the UI; this is only the starting point. */
+export const SEED_ROSTER: Staff[] = BASE.map((staff) => {
+  const [officeHours, advisingHours, qualityHours] = HOURS[staff.id] ?? [4, 4, 2];
+  return { ...staff, advising: advisingHours > 0, officeHours, advisingHours, qualityHours, presets: SEED_PRESETS[staff.id] ?? [] };
+});
 
 /**
  * Fill `staffId` on every name token by exact alias match (letters only), then

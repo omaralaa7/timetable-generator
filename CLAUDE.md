@@ -187,3 +187,9 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 5. Tests vs `samples/expected/`.
 6. UI (upload → roster → review → download), persistence, xlsx-master parser (civil).
 7. GitHub Pages workflow + short Arabic usage guide on the page.
+
+## 13. Decisions after the first build (client / owner, 2026-10-09)
+- **`samples/expected` are the target sheets.** Each person's office / advising / quality blocks, their hours, and their lectures/labs from the PDF-only masters (mechanics, preparatory) are remembered from those sheets as roster *presets* (`src/core/seedPresets.ts`, regenerate with `node scripts/seed-from-samples.ts`). Presets are placed only where the masters leave the slot free; a master that later covers the same slot wins.
+- Lab supervision when both doctors are free: leave a doctor's preset duty time alone, then split the course's sessions evenly between the two doctors, then keep the same doctor on the same section, then balance total load.
+- Everyone must reach the minimum load; the tool tops up with office hours and advising.
+- Commits carry the owner's name only (no co-author lines).

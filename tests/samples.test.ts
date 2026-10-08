@@ -37,16 +37,15 @@ test('diff against every hand-made sheet (printed, informational)', () => {
   assert.equal(diffs.size, 10);
 });
 
-test('Asmaa Radi: every lecture slot of her sheet that comes from an available master is generated', () => {
+test('Asmaa Radi: every lecture slot of her sheet is generated', () => {
   const d = diffs.get('asmaa-radi')!;
-  // 12 lecture hours on her sheet, 2 of them from the mechanics master (PDF only).
-  assert.deepEqual([d.lectureSlots.same, d.lectureSlots.expected], [10, 12]);
+  assert.deepEqual([d.lectureSlots.same, d.lectureSlots.expected], [12, 12]);
   assert.deepEqual(d.lines.filter((x) => x.startsWith('course differs')), []);
 });
 
-test('most lecture slots of the comms staff match their sheets', () => {
-  for (const id of ['asmaa-radi', 'ahmed-salem', 'hend-elsayed', 'mai-helmy']) {
-    const l = diffs.get(id)!.lectureSlots;
-    assert.ok(l.same / l.expected >= 0.7, `${id}: ${l.same}/${l.expected}`);
+test('lecture slots of every sheet are generated (a few moved in the newer masters)', () => {
+  for (const [id, d] of diffs) {
+    const l = d.lectureSlots;
+    assert.ok(l.same / l.expected >= 0.85, `${id}: ${l.same}/${l.expected}`);
   }
 });

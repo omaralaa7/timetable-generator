@@ -1,5 +1,5 @@
 import { nameKey, normalize } from './normalize.ts';
-import type { Staff } from './roster.ts';
+import type { Preset, Staff } from './roster.ts';
 import type { NameToken, ParsedText, Rank, Session } from './types.ts';
 
 export type ItemType = 'lecture' | 'supervision' | 'section' | 'office' | 'advising' | 'quality';
@@ -133,7 +133,8 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   const items = new Map<string, GridItem[]>(roster.map((s) => [s.id, []]));
   const courses = new Map<string, Map<string, CourseRow & { order: number }>>(roster.map((s) => [s.id, new Map()]));
   const busy = (id: string, at: { day: number; slots: number[] }) =>
-    byId.get(id)!.secondmentDay === at.day || items.get(id)!.some((it) => overlaps(it, at));
+    byId.get(id)!.secondmentDay === at.day || items.get(id)!.some((it) => overlaps(it, at)) ||
+    at.slots.some((s) => decisions.edits?.[id]?.[`${at.day}:${s}`]); // a cell the user filled by hand
 
   const place = (id: string, item: GridItem, what: string) => {
     const staff = byId.get(id)!;
@@ -246,6 +247,18 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     }
   }
 
+  // Lectures and labs remembered from programmes whose master cannot be read yet.
+  const fits = (id: string, p: Preset) => byId.get(id)!.secondmentDay !== p.day && !items.get(id)!.some((it) => overlaps(it, p));
+  for (const staff of roster) {
+    for (const p of staff.presets ?? []) {
+      if (p.type !== 'lecture' && p.type !== 'supervision' && p.type !== 'section') continue;
+      if (p.course && !courses.get(staff.id)!.has(p.course.key)) courses.get(staff.id)!.set(p.course.key, { ...p.course, order: order++ });
+      // Once the user has edited this person's grid, their blocks live in `decisions.duties`.
+      if (decisions.duties?.[staff.id] || !fits(staff.id, p)) continue;
+      items.get(staff.id)!.push({ day: p.day, slots: [...p.slots], type: p.type, text: p.text, origin: 'manual' });
+    }
+  }
+
   // ── Sections and labs (§5.3) ──
   const sections = sessions
     .filter((s) => s.parsed.type === 'section')
@@ -292,7 +305,19 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     const siblings = sections.filter((x) => supervisor.has(x.id) && sectionOf(x) === sectionOf(open));
     const sameSection = siblings.find((x) => x.sections.join() === open.sections.join() && free.includes(supervisor.get(x.id)!));
     const otherSection = siblings.find((x) => x.sections.join() !== open.sections.join());
-    let pick = sameSection ? supervisor.get(sameSection.id)! : undefined;
+    // The two doctors of a course share its sessions evenly (across programmes); then the rules below.
+    const courseHours = (id: string) => sections
+      .filter((x) => supervisor.get(x.id) === id && key(x.parsed.title) === key(open.parsed.title))
+      .reduce((n, x) => n + x.slots.length, 0);
+    // A doctor's fixed office / advising / quality time is left alone when the other one can take the session.
+    const hasDuty = (id: string) => (byId.get(id)!.presets ?? []).some((p) => !decisions.duties?.[id] && overlaps(p, open));
+    const clear = free.filter((id) => !hasDuty(id));
+    const pool = clear.length ? clear : free;
+    const fewest = Math.min(...pool.map(courseHours));
+    const behind = pool.filter((id) => courseHours(id) === fewest);
+    let pick = behind.length === 1 ? behind[0] : undefined;
+    if (!pick && pool.length < free.length && sameSection && !pool.includes(supervisor.get(sameSection.id)!)) pick = behind[0];
+    if (!pick && sameSection) pick = supervisor.get(sameSection.id)!;
     if (!pick && otherSection) pick = free.find((id) => id !== supervisor.get(otherSection.id));
     if (!pick) pick = [...free].sort((a, b) => load(a) - load(b))[0];
     assign(open, pick);
@@ -382,10 +407,24 @@ function suggestDuties(staff: Staff, items: GridItem[]): void {
     }
     return want - left;
   };
+  const hours = (type: ItemType) => items.filter((it) => it.type === type).reduce((n, it) => n + it.slots.length, 0);
   const counted = () => items.filter((it) => it.type !== 'quality').reduce((n, it) => n + it.slots.length, 0);
   const canAdvise = staff.advising;
-  add('office', staff.officeHours ?? 4);
-  if (canAdvise) add('advising', staff.advisingHours ?? 4);
+  // First the places the committee already chose, wherever they are still free …
+  for (const p of staff.presets ?? []) {
+    if (p.type !== 'office' && p.type !== 'advising' && p.type !== 'quality') continue;
+    if (p.day === staff.secondmentDay || (p.type === 'advising' && !canAdvise)) continue;
+    const want = { office: staff.officeHours ?? 4, advising: staff.advisingHours ?? 4, quality: staff.qualityHours }[p.type];
+    for (const run of p.slots.filter((s) => !taken(p.day, s)).map((s) => [s])) {
+      if (hours(p.type) >= want) break;
+      const last = items[items.length - 1];
+      if (last && last.origin === 'auto' && last.type === p.type && last.day === p.day && last.slots[last.slots.length - 1] === run[0] - 1) last.slots.push(run[0]);
+      else items.push({ day: p.day, slots: run, type: p.type, text: DUTY_TEXT[p.type], origin: 'auto' });
+    }
+  }
+  // … then whatever is still missing.
+  add('office', Math.max(0, (staff.officeHours ?? 4) - hours('office')));
+  if (canAdvise) add('advising', Math.max(0, (staff.advisingHours ?? 4) - hours('advising')));
   // Top up to the minimum, alternating office hours and advising.
   let turn: 'office' | 'advising' = 'office';
   while (counted() < MINIMUM[staff.rank]) {
@@ -393,7 +432,7 @@ function suggestDuties(staff: Staff, items: GridItem[]): void {
     if (!add(canAdvise ? turn : 'office', need)) break;
     turn = turn === 'office' ? 'advising' : 'office';
   }
-  add('quality', staff.qualityHours);
+  add('quality', Math.max(0, staff.qualityHours - hours('quality')));
 }
 
 /** Cell-by-cell changes from the editable grid win over everything else. */
