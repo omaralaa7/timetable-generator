@@ -5,7 +5,7 @@ import { type GridItem, type Issue, type ItemType, type Result, type StaffSheet 
 import { SLOT_LABELS } from '../core/slots.ts';
 import type { Rank } from '../core/types.ts';
 import { sheetFileName, writeSheet } from '../core/writer.ts';
-import { emptyProject, loadProject, normaliseProject, saveProject, type Project } from './state.ts';
+import { loadProject, saveProject, type Project } from './state.ts';
 
 type Tab = 'files' | 'sheets' | 'issues' | 'settings';
 
@@ -26,7 +26,7 @@ const ISSUE_TITLES: Record<Issue['kind'], string> = {
   project: 'مشروع التخرج',
 };
 
-let project: Project = loadProject();
+const project: Project = loadProject();
 let tab: Tab = project.masters.length ? 'sheets' : 'files';
 let person = '';
 let message = '';
@@ -41,7 +41,7 @@ const esc = (s: unknown) =>
 function commit(note = ''): void {
   result = generate(project.masters, project.roster, project.decisions);
   if (!project.masters.length && (tab === 'sheets' || tab === 'issues')) tab = 'files';
-  message =saveProject(project) ? note : 'تعذر الحفظ في المتصفح — استخدم «حفظ ملف المشروع»';
+  message = saveProject(project) ? note : 'تعذر الحفظ في المتصفح — ستبقى التعديلات حتى إغلاق الصفحة فقط';
   render();
 }
 
@@ -261,15 +261,6 @@ function settingsView(): string {
           ${s.signatures.map((sig, i) => `<label>${esc(sig.title)} <input data-sig="${i}" value="${esc(sig.name)}"></label>`).join('')}
         </div>
       </details>
-      <details>
-        <summary>نقل العمل إلى جهاز آخر / البدء من جديد</summary>
-        <p class="hint">كل شيء يُحفظ تلقائياً في هذا المتصفح. لنقله إلى جهاز آخر احفظ ملف المشروع ثم افتحه هناك.</p>
-        <div class="row">
-          <button data-act="export-project">حفظ ملف المشروع</button>
-          <label class="button">فتح ملف مشروع<input type="file" accept=".json" data-act="import-project" hidden></label>
-          <button data-act="reset" class="danger">حذف كل شيء والبدء من جديد</button>
-        </div>
-      </details>
     </section>`;
 }
 
@@ -459,16 +450,6 @@ root.addEventListener('click', (e) => {
       return void downloadOne(id);
     case 'download-all':
       return void downloadAll();
-    case 'export-project':
-      return download('مشروع الجداول الفردية.json', JSON.stringify(project), 'application/json');
-    case 'reset':
-      if (confirm('حذف كل الملفات والقرارات والبدء من جديد؟')) {
-        project = emptyProject();
-        fileData.clear();
-        tab = 'files';
-        commit();
-      }
-      return;
   }
 });
 
@@ -476,17 +457,6 @@ root.addEventListener('change', async (e) => {
   const el = e.target as HTMLInputElement | HTMLSelectElement;
   const input = el as HTMLInputElement;
   if (el.dataset.act === 'upload' && input.files) return addFiles([...input.files]);
-  if (el.dataset.act === 'import-project' && input.files?.[0]) {
-    try {
-      project = normaliseProject(JSON.parse(await input.files[0].text()));
-      tab = 'sheets';
-      commit('تم فتح ملف المشروع');
-    } catch (err) {
-      message = err instanceof Error ? err.message : 'ملف المشروع غير صالح';
-      render();
-    }
-    return;
-  }
   if (el.dataset.act === 'sheet') {
     const m = project.masters[Number(el.dataset.i)];
     const data = fileData.get(m.fileName);
