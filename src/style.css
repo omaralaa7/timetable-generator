@@ -107,3 +107,15 @@ dialog form { display: flex; flex-direction: column; gap: 12px; }
 dialog .types { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 dialog .types label { flex-direction: row; align-items: center; color: var(--ink); }
 dialog textarea { width: 100%; color: var(--ink); }
+
+/* guided flow */
+.lead { font-size: 1.05rem; margin: 0 0 12px; }
+.next { display: flex; align-items: center; gap: 12px; margin: 18px 0 6px; }
+.done { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: #e9f7ec; border: 1px solid #b7dfc0; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; }
+.done b { display: block; font-size: 1.1rem; }
+.ok { color: var(--good); font-weight: 700; }
+.small { font-weight: 400 !important; color: var(--muted); font-size: 0.9rem; }
+nav button:disabled { opacity: 0.45; cursor: default; }
+button.link.danger { color: var(--bad); }
+main section > details { border: 1px solid var(--line); border-radius: 6px; padding: 4px 12px; margin-bottom: 8px; }
+.person details { margin-top: 14px; }

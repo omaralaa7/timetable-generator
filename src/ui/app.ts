@@ -7,7 +7,7 @@ import type { Rank } from '../core/types.ts';
 import { sheetFileName, writeSheet } from '../core/writer.ts';
 import { emptyProject, loadProject, normaliseProject, saveProject, type Project } from './state.ts';
 
-type Tab = 'files' | 'roster' | 'review' | 'download';
+type Tab = 'files' | 'sheets' | 'issues' | 'settings';
 
 const DAY_NAMES = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
 const RANKS: Record<Rank, string> = { professor: 'أستاذ دكتور', associate: 'أستاذ مساعد', lecturer: 'مدرس', ta: 'مدرس مساعد / معيد' };
@@ -27,7 +27,7 @@ const ISSUE_TITLES: Record<Issue['kind'], string> = {
 };
 
 let project: Project = loadProject();
-let tab: Tab = project.masters.length ? 'review' : 'files';
+let tab: Tab = project.masters.length ? 'sheets' : 'files';
 let person = '';
 let message = '';
 let result: Result = generate(project.masters, project.roster, project.decisions);
@@ -40,7 +40,8 @@ const esc = (s: unknown) =>
 
 function commit(note = ''): void {
   result = generate(project.masters, project.roster, project.decisions);
-  message = saveProject(project) ? note : 'تعذر الحفظ في المتصفح — استخدم «حفظ ملف المشروع»';
+  if (!project.masters.length && (tab === 'sheets' || tab === 'issues')) tab = 'files';
+  message =saveProject(project) ? note : 'تعذر الحفظ في المتصفح — استخدم «حفظ ملف المشروع»';
   render();
 }
 
@@ -56,25 +57,19 @@ function download(name: string, data: BlobPart, type: string): void {
 // ───────────────────────── views ─────────────────────────
 
 function render(): void {
+  const ready = project.masters.length > 0;
   const open = result.issues.length;
-  const tabs: [Tab, string][] = [
-    ['files', `١ · الجداول الرئيسية (${project.masters.length})`],
-    ['roster', `٢ · هيئة التدريس (${project.roster.length})`],
-    ['review', `٣ · المراجعة${open ? ` (${open})` : ''}`],
-    ['download', '٤ · التنزيل'],
+  const tabs: [Tab, string, boolean][] = [
+    ['files', '١ · رفع الجداول الرئيسية', true],
+    ['sheets', '٢ · الجداول الفردية', ready],
+    ['issues', `٣ · قرارات اختيارية${ready && open ? ` (${open})` : ''}`, ready],
+    ['settings', '⚙ الإعدادات', true],
   ];
   root.innerHTML = `
-    <header>
-      <h1>مولّد الجداول الفردية</h1>
-      <div class="tools">
-        <button data-act="export-project">حفظ ملف المشروع</button>
-        <label class="button">فتح ملف مشروع<input type="file" accept=".json" data-act="import-project" hidden></label>
-        <button data-act="reset" class="danger">بدء من جديد</button>
-      </div>
-    </header>
-    <nav>${tabs.map(([id, label]) => `<button data-tab="${id}" class="${id === tab ? 'on' : ''}">${label}</button>`).join('')}</nav>
+    <header><h1>مولّد الجداول الفردية</h1></header>
+    <nav>${tabs.map(([id, label, on]) => `<button data-tab="${id}" class="${id === tab ? 'on' : ''}" ${on ? '' : 'disabled'}>${label}</button>`).join('')}</nav>
     ${message ? `<p class="note">${esc(message)}</p>` : ''}
-    <main>${{ files: filesView, roster: rosterView, review: reviewView, download: downloadView }[tab]()}</main>
+    <main>${{ files: filesView, sheets: sheetsView, issues: issuesView, settings: settingsView }[tab]()}</main>
     <dialog id="editor"></dialog>`;
 }
 
@@ -82,66 +77,40 @@ function filesView(): string {
   const masters = project.masters.map((m, i) => `
     <li>
       <div class="row">
+        <span class="ok">✓</span>
         <strong>${esc(m.fileName)}</strong>
-        <span>${m.sessions.length} حصة</span>
+        <span class="hint">${m.sessions.length} حصة</span>
         ${m.sheets && m.sheets.length > 1 ? `<label>الورقة:
           <select data-act="sheet" data-i="${i}" ${fileData.has(m.fileName) ? '' : 'disabled title="أعد رفع الملف لتغيير الورقة"'}>
             ${m.sheets.map((s) => `<option ${s === m.sheet ? 'selected' : ''}>${esc(s)}</option>`).join('')}
           </select></label>` : ''}
-        <button data-act="remove-master" data-i="${i}" class="danger">حذف</button>
+        <button data-act="remove-master" data-i="${i}" class="link danger">حذف</button>
       </div>
-      ${m.warnings.length ? `<details><summary>${m.warnings.length} ملاحظة عند القراءة</summary><ul>${m.warnings.map((w) => `<li>${esc(w.message)}</li>`).join('')}</ul></details>` : ''}
+      ${m.warnings.length ? `<details><summary class="small">${m.warnings.length} خانة لم تُفهم (للاطلاع فقط)</summary><ul>${m.warnings.map((w) => `<li>${esc(w.message)}</li>`).join('')}</ul></details>` : ''}
     </li>`).join('');
   return `
     <section>
+      <p class="lead">الخطوة ١: ضع ملفات الجداول الرئيسية لكل البرامج (اتصالات، قوى، مدني…).</p>
       <label class="drop" id="drop">
         <input type="file" multiple accept=".docx,.xlsx,.pdf" data-act="upload" hidden>
-        <b>اسحب الجداول الرئيسية إلى هنا أو اضغط للاختيار</b>
-        <span>ملفات Word (‎.docx) أو Excel (‎.xlsx) — الملفات لا تغادر جهازك</span>
+        <b>اسحب الملفات إلى هنا أو اضغط للاختيار</b>
+        <span>ملفات Word أو Excel — الملفات لا تغادر جهازك</span>
       </label>
-      <ul class="masters">${masters || '<li class="empty">لم يتم رفع أي جدول بعد.</li>'}</ul>
-      <details class="guide" ${project.masters.length ? '' : 'open'}>
+      <ul class="masters">${masters}</ul>
+      <div class="next">
+        <button data-act="process" class="primary big" ${project.masters.length ? '' : 'disabled'}>إنشاء الجداول الفردية ←</button>
+        ${project.masters.length ? '' : '<span class="hint">ارفع ملفاً واحداً على الأقل أولاً</span>'}
+      </div>
+      <details class="guide">
         <summary>طريقة الاستخدام</summary>
         <ol>
-          <li><b>ارفع الجداول الرئيسية</b> لكل البرامج (اتصالات، قوى، مدني…). إذا تغيّر جدول، ارفعه مرة أخرى بنفس اسم الملف وسيُستبدل القديم وتبقى قراراتك السابقة.</li>
-          <li><b>هيئة التدريس</b>: راجع الأسماء والدرجات ويوم الانتداب، وأضف من يظهر في «أسماء غير مسجلة» إن كان من القسم.</li>
-          <li><b>المراجعة</b>: احسم ما لم يستطع البرنامج حسمه (من يبدأ المحاضرة، من يشرف على المعمل)، وعدّل جدول أي عضو بالضغط على الخانة.</li>
-          <li><b>التنزيل</b>: ملف Excel لكل عضو، أو الكل في ملف مضغوط.</li>
+          <li><b>ارفع الجداول الرئيسية</b> ثم اضغط «إنشاء الجداول الفردية».</li>
+          <li><b>الجداول الفردية</b>: اختر العضو لترى جدوله، واضغط «تنزيل كل الجداول» للحصول على ملفات Excel.</li>
+          <li><b>قرارات اختيارية</b>: حالات لم يستطع البرنامج حسمها وحده (مثلاً من يشرف على معمل). إن تركتها يُستخدم اقتراح البرنامج.</li>
         </ol>
-        <p>القاعدة: الدكتور الذي تحت اسمه خط في خانة المحاضرة يدرّس الأسابيع 1–7 والآخر 9–15. ملفات PDF غير مدعومة.</p>
-        <p>كل شيء يُحفظ تلقائياً في هذا المتصفح. للانتقال إلى جهاز آخر استخدم «حفظ ملف المشروع» ثم «فتح ملف مشروع».</p>
+        <p>إذا تغيّر جدول رئيسي، ارفعه مرة أخرى بنفس اسم الملف وسيُستبدل القديم وتبقى قراراتك. ملفات PDF غير مدعومة.</p>
+        <p>القاعدة: الدكتور الذي تحت اسمه خط في خانة المحاضرة يدرّس الأسابيع 1–7 والآخر 9–15.</p>
       </details>
-    </section>`;
-}
-
-function rosterView(): string {
-  const dayOptions = (value: number | null) =>
-    `<option value="">—</option>${DAY_NAMES.map((d, i) => `<option value="${i}" ${value === i ? 'selected' : ''}>${d}</option>`).join('')}`;
-  const rows = project.roster.map((s, i) => `
-    <tr data-i="${i}">
-      <td><input data-f="name" value="${esc(s.name)}"></td>
-      <td><input data-f="aliases" value="${esc(s.aliases.join('، '))}" title="الأسماء كما تُكتب في الجداول الرئيسية، مفصولة بفاصلة"></td>
-      <td><input data-f="programme" value="${esc(s.programme)}"></td>
-      <td><select data-f="rank">${(Object.keys(RANKS) as Rank[]).map((r) => `<option value="${r}" ${s.rank === r ? 'selected' : ''}>${RANKS[r]}</option>`).join('')}</select></td>
-      <td class="c"><input type="checkbox" data-f="advising" ${s.advising ? 'checked' : ''}></td>
-      <td><select data-f="secondmentDay">${dayOptions(s.secondmentDay)}</select></td>
-      <td><input type="number" min="0" max="10" data-f="qualityHours" value="${s.qualityHours}"></td>
-      <td><input type="number" min="0" max="20" data-f="officeHours" value="${s.officeHours ?? 4}"></td>
-      <td><input type="number" min="0" max="20" data-f="advisingHours" value="${s.advisingHours ?? 4}" ${s.advising ? '' : 'disabled'}></td>
-      <td><button data-act="remove-staff" data-i="${i}" class="danger" title="حذف">✕</button></td>
-    </tr>`).join('');
-  const detected = result.detected.filter((d) => d.role === 'doctor' || d.count > 2);
-  return `
-    <section>
-      <p class="hint">فقط من في هذه القائمة يصدر له جدول. «الأسماء في الجداول» هي طرق كتابة الاسم في الجداول الرئيسية (بدون اللقب).</p>
-      <div class="scroll"><table class="roster">
-        <thead><tr><th>الاسم على الجدول</th><th>الأسماء في الجداول</th><th>البرنامج (سطر القسم)</th><th>الدرجة</th><th>مرشد</th><th>الانتداب</th><th>جودة</th><th>مكتبية</th><th>ارشاد</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>
-      <button data-act="add-staff">+ إضافة عضو</button>
-      ${detected.length ? `<h3>أسماء في الجداول غير مسجلة في القائمة</h3>
-        <p class="hint">أضف من هو من القسم فقط؛ الباقون يُتجاهلون.</p>
-        <ul class="chips">${detected.map((d) => `<li>${esc(d.name)} <small>(${d.count})</small> <button data-act="add-detected" data-name="${esc(d.name)}" data-role="${d.role}">إضافة</button></li>`).join('')}</ul>` : ''}
     </section>`;
 }
 
@@ -151,7 +120,7 @@ function issueCard(i: Issue): string {
     const text = i.kind === 'no-underline' ? `يبدأ: ${label}` : i.kind === 'both-free' && n === 0 ? `✓ ${label}` : label;
     return `<button data-act="fix" data-id="${esc(i.id)}" data-opt="${esc(o)}" class="${i.kind === 'both-free' && n === 0 ? 'primary' : ''}">${esc(text)}</button>`;
   }).join('');
-  const none = i.kind === 'conflict' ? `<button data-act="fix" data-id="${esc(i.id)}" data-opt="none">بدون إشراف من القسم</button>` : '';
+  const none = i.kind === 'conflict' ? `<button data-act="fix" data-id="${esc(i.id)}" data-opt="none">لا أحد من القسم</button>` : '';
   const go = i.staffIds.length ? `<button data-act="person" data-id="${esc(i.staffIds[0])}" class="link">عرض الجدول</button>` : '';
   return `<li><p>${esc(i.message)}</p><div class="row">${buttons}${none}${go}<button data-act="dismiss" data-id="${esc(i.id)}" class="link">تجاهل</button></div></li>`;
 }
@@ -194,61 +163,113 @@ function personView(sheet: StaffSheet): string {
     <div class="person">
       <div class="row">
         <h3>${esc(sheet.staff.name)} — ${RANKS[sheet.staff.rank]}</h3>
-        <button data-act="download-one" data-id="${esc(sheet.staff.id)}" class="primary">تنزيل Excel</button>
-        ${edited ? `<button data-act="reset-person" data-id="${esc(sheet.staff.id)}">إلغاء تعديلاتي لهذا العضو</button>` : ''}
+        <button data-act="download-one" data-id="${esc(sheet.staff.id)}">تنزيل هذا الجدول (Excel)</button>
+        ${edited ? `<button data-act="reset-person" data-id="${esc(sheet.staff.id)}" class="link">إلغاء تعديلاتي</button>` : ''}
       </div>
-      <p class="hint">اضغط على أي خانة لتغييرها. الألوان: <span class="key t-lecture">محاضرة</span> <span class="key t-supervision">إشراف</span> <span class="key t-office">مكتبية / ارشاد / جودة</span></p>
       ${gridTable(sheet)}
+      <p class="hint"><span class="key t-lecture">محاضرة</span> <span class="key t-supervision">إشراف</span> <span class="key t-office">مكتبية / ارشاد / جودة</span> — للتعديل اضغط على أي خانة.</p>
       <table class="totals">
         <tr><th>${isTa ? 'تمرين/عملي' : 'المحاضرات'}</th><th>الساعات المكتبية</th><th>ساعات الإشراف</th><th>الإرشاد الأكاديمي</th><th>الجودة</th><th>النصاب (بدون الجودة)</th></tr>
         <tr><td>${t.teaching}</td><td>${t.office}</td><td>${t.supervision}</td><td>${t.advising}</td><td>${t.quality}</td>
           <td class="${t.counted < t.minimum ? 'bad' : 'good'}">${t.counted} من ${t.minimum}</td></tr>
       </table>
-      <h4>المقررات المشارك فيها</h4>
-      <table class="courses">
-        <thead><tr><th>المقرر</th><th>نسبة المشاركة</th><th>الأسابيع</th><th></th></tr></thead>
-        <tbody>${courses}</tbody>
-      </table>
-      <button data-act="add-course">+ إضافة مقرر</button>
+      <details>
+        <summary>المقررات المشارك فيها (${sheet.courses.length})</summary>
+        <table class="courses">
+          <thead><tr><th>المقرر</th><th>نسبة المشاركة</th><th>الأسابيع</th><th></th></tr></thead>
+          <tbody>${courses}</tbody>
+        </table>
+        <button data-act="add-course">+ إضافة مقرر</button>
+      </details>
     </div>`;
 }
 
-function reviewView(): string {
-  if (!project.masters.length) return '<section><p class="empty">ارفع الجداول الرئيسية أولاً.</p></section>';
+function sheetsView(): string {
+  const current = result.sheets.find((s) => s.staff.id === person) ?? result.sheets[0];
+  const open = result.issues.length;
+  return `
+    <section>
+      <div class="done">
+        <div>
+          <b>تم إنشاء ${result.sheets.length} جدولاً فردياً.</b>
+          ${open ? `<span class="hint">يوجد ${open} قرار اختياري — <button data-tab="issues" class="link">عرضها</button></span>` : ''}
+        </div>
+        <button data-act="download-all" class="primary big">⬇ تنزيل كل الجداول (ملف مضغوط)</button>
+      </div>
+      <p class="lead">اختر عضواً لمعاينة جدوله:</p>
+      <div class="people">${result.sheets.map((s) => `<button data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)}</button>`).join('')}</div>
+      ${current ? personView(current) : '<p class="empty">لا يوجد أعضاء في القائمة — أضفهم من الإعدادات.</p>'}
+    </section>`;
+}
+
+function issuesView(): string {
   const kinds = Object.keys(ISSUE_TITLES) as Issue['kind'][];
   const groups = kinds.map((kind) => {
     const list = result.issues.filter((i) => i.kind === kind);
     if (!list.length) return '';
-    return `<details ${kind === 'no-underline' || kind === 'short-name' ? 'open' : ''}><summary>${ISSUE_TITLES[kind]} <b>${list.length}</b></summary><ul class="issues">${list.map(issueCard).join('')}</ul></details>`;
+    return `<details><summary>${ISSUE_TITLES[kind]} <b>${list.length}</b></summary><ul class="issues">${list.map(issueCard).join('')}</ul></details>`;
   }).join('');
-  const current = result.sheets.find((s) => s.staff.id === person) ?? result.sheets[0];
   const decided = Object.keys(project.decisions.supervisor ?? {}).length + Object.keys(project.decisions.starts ?? {}).length +
     Object.keys(project.decisions.dismissed ?? {}).length + Object.keys(project.decisions.names ?? {}).length;
   return `
     <section>
-      <h2>ما يحتاج قرارك</h2>
-      ${groups || '<p class="good">لا توجد مشاكل معلّقة.</p>'}
-      ${decided ? `<button data-act="undo-decisions" class="link">التراجع عن قراراتي في هذه القائمة (${decided})</button>` : ''}
-      <h2>جداول الأعضاء</h2>
-      <div class="people">${result.sheets.map((s) => `<button data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)} <small>${s.totals.counted}/${s.totals.minimum}</small></button>`).join('')}</div>
-      ${current ? personView(current) : ''}
+      <p class="lead">هذه الخطوة اختيارية. هذه حالات لم يستطع البرنامج حسمها وحده؛ إن تركتها يبقى اقتراحه كما هو. اضغط على أي مجموعة لفتحها.</p>
+      ${groups || '<p class="good">لا توجد قرارات معلّقة.</p>'}
+      ${decided ? `<button data-act="undo-decisions" class="link">التراجع عن قراراتي (${decided})</button>` : ''}
+      <div class="next"><button data-tab="sheets" class="primary">← العودة إلى الجداول</button></div>
     </section>`;
 }
 
-function downloadView(): string {
+function settingsView(): string {
   const s = project.settings;
+  const dayOptions = (value: number | null) =>
+    `<option value="">—</option>${DAY_NAMES.map((d, i) => `<option value="${i}" ${value === i ? 'selected' : ''}>${d}</option>`).join('')}`;
+  const rows = project.roster.map((st, i) => `
+    <tr data-i="${i}">
+      <td><input data-f="name" value="${esc(st.name)}"></td>
+      <td><input data-f="aliases" value="${esc(st.aliases.join('، '))}" title="الأسماء كما تُكتب في الجداول الرئيسية، مفصولة بفاصلة"></td>
+      <td><input data-f="programme" value="${esc(st.programme)}"></td>
+      <td><select data-f="rank">${(Object.keys(RANKS) as Rank[]).map((r) => `<option value="${r}" ${st.rank === r ? 'selected' : ''}>${RANKS[r]}</option>`).join('')}</select></td>
+      <td class="c"><input type="checkbox" data-f="advising" ${st.advising ? 'checked' : ''}></td>
+      <td><select data-f="secondmentDay">${dayOptions(st.secondmentDay)}</select></td>
+      <td><input type="number" min="0" max="10" data-f="qualityHours" value="${st.qualityHours}"></td>
+      <td><input type="number" min="0" max="20" data-f="officeHours" value="${st.officeHours ?? 4}"></td>
+      <td><input type="number" min="0" max="20" data-f="advisingHours" value="${st.advisingHours ?? 4}" ${st.advising ? '' : 'disabled'}></td>
+      <td><button data-act="remove-staff" data-i="${i}" class="danger" title="حذف">✕</button></td>
+    </tr>`).join('');
+  const detected = result.detected.filter((d) => d.role === 'doctor' || d.count > 2);
   return `
     <section>
-      <h2>بيانات تظهر في كل جدول</h2>
-      <div class="form">
-        <label>الفصل الدراسي <input data-s="semester" value="${esc(s.semester)}"></label>
-        <label>اسم القسم <input data-s="department" value="${esc(s.department)}"></label>
-        ${s.signatures.map((sig, i) => `<label>${esc(sig.title)} <input data-sig="${i}" value="${esc(sig.name)}"></label>`).join('')}
-      </div>
-      <h2>التنزيل</h2>
-      ${result.issues.length ? `<p class="hint">ما زال هناك ${result.issues.length} بند في المراجعة — يمكنك التنزيل الآن أو حسمها أولاً.</p>` : ''}
-      <button data-act="download-all" class="primary big" ${result.sheets.length && project.masters.length ? '' : 'disabled'}>تنزيل كل الجداول (ملف مضغوط)</button>
-      <ul class="files">${result.sheets.map((sh) => `<li><span>${esc(sheetFileName(sh))}</span><button data-act="download-one" data-id="${esc(sh.staff.id)}">تنزيل</button></li>`).join('')}</ul>
+      <p class="lead">لا تحتاج هذه الصفحة في الاستخدام العادي. استخدمها عند تغيّر أعضاء القسم أو بيانات التوقيعات.</p>
+      <details open>
+        <summary>أعضاء القسم (${project.roster.length})</summary>
+        <p class="hint">فقط من في هذه القائمة يصدر له جدول.</p>
+        <div class="scroll"><table class="roster">
+          <thead><tr><th>الاسم على الجدول</th><th>الاسم كما يُكتب في الجداول الرئيسية</th><th>البرنامج</th><th>الدرجة</th><th>مرشد</th><th>الانتداب</th><th>جودة</th><th>مكتبية</th><th>ارشاد</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+        <button data-act="add-staff">+ إضافة عضو</button>
+        ${detected.length ? `<details><summary class="small">أسماء في الجداول الرئيسية ليست في القائمة (${detected.length})</summary>
+          <p class="hint">أضف من هو من القسم فقط؛ الباقون يُتجاهلون.</p>
+          <ul class="chips">${detected.map((d) => `<li>${esc(d.name)} <button data-act="add-detected" data-name="${esc(d.name)}" data-role="${d.role}">إضافة</button></li>`).join('')}</ul></details>` : ''}
+      </details>
+      <details>
+        <summary>بيانات تظهر في كل جدول (الفصل الدراسي والتوقيعات)</summary>
+        <div class="form">
+          <label>الفصل الدراسي <input data-s="semester" value="${esc(s.semester)}"></label>
+          <label>اسم القسم <input data-s="department" value="${esc(s.department)}"></label>
+          ${s.signatures.map((sig, i) => `<label>${esc(sig.title)} <input data-sig="${i}" value="${esc(sig.name)}"></label>`).join('')}
+        </div>
+      </details>
+      <details>
+        <summary>نقل العمل إلى جهاز آخر / البدء من جديد</summary>
+        <p class="hint">كل شيء يُحفظ تلقائياً في هذا المتصفح. لنقله إلى جهاز آخر احفظ ملف المشروع ثم افتحه هناك.</p>
+        <div class="row">
+          <button data-act="export-project">حفظ ملف المشروع</button>
+          <label class="button">فتح ملف مشروع<input type="file" accept=".json" data-act="import-project" hidden></label>
+          <button data-act="reset" class="danger">حذف كل شيء والبدء من جديد</button>
+        </div>
+      </details>
     </section>`;
 }
 
@@ -266,9 +287,11 @@ async function addFiles(files: File[]): Promise<void> {
       const at = project.masters.findIndex((m) => m.fileName === file.name);
       if (at >= 0) project.masters[at] = stored;
       else project.masters.push(stored);
-      notes.push(`«${file.name}»: ${master.sessions.length} حصة${at >= 0 ? ' (تم استبدال النسخة السابقة)' : ''}`);
+      if (at >= 0) notes.push(`«${file.name}»: تم استبدال النسخة السابقة`);
     } catch (e) {
-      notes.push(e instanceof Error ? e.message : String(e));
+      const text = e instanceof Error ? e.message : String(e);
+      // Library errors are in English; show our own wording instead.
+      notes.push(/[؀-ۿ]/.test(text) ? text : `«${file.name}»: تعذر قراءة الملف — تأكد أنه ملف Word أو Excel سليم`);
     }
   }
   commit(notes.join(' — '));
@@ -376,6 +399,7 @@ root.addEventListener('click', (e) => {
   const el = (e.target as HTMLElement).closest<HTMLElement>('[data-tab],[data-act],[data-cell]');
   if (!el) return;
   if (el.dataset.tab) {
+    if ((el as HTMLButtonElement).disabled) return;
     tab = el.dataset.tab as Tab;
     message = '';
     return render();
@@ -387,6 +411,7 @@ root.addEventListener('click', (e) => {
     case 'remove-master':
       project.masters.splice(index, 1);
       return commit();
+
     case 'add-staff':
       project.roster.push(newStaff());
       return commit();
@@ -399,9 +424,14 @@ root.addEventListener('click', (e) => {
         commit();
       }
       return;
+    case 'process':
+      tab = 'sheets';
+      message = '';
+      render();
+      return window.scrollTo(0, 0);
     case 'person':
       person = id;
-      tab = 'review';
+      tab = 'sheets';
       render();
       return document.querySelector('.person')?.scrollIntoView({ behavior: 'smooth' });
     case 'fix':
@@ -449,7 +479,7 @@ root.addEventListener('change', async (e) => {
   if (el.dataset.act === 'import-project' && input.files?.[0]) {
     try {
       project = normaliseProject(JSON.parse(await input.files[0].text()));
-      tab = 'review';
+      tab = 'sheets';
       commit('تم فتح ملف المشروع');
     } catch (err) {
       message = err instanceof Error ? err.message : 'ملف المشروع غير صالح';
