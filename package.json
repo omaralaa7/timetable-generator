@@ -1,0 +1,23 @@
+{
+  "name": "individual-timetable-generator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "sessions": "node scripts/dump-sessions.ts"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.12",
+    "exceljs": "^4.4.0",
+    "jszip": "^3.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

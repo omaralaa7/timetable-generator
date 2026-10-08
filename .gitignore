@@ -1,0 +1,6 @@
+node_modules/
+dist/
+debug/
+timetable-kit/
+timetable-kit.zip
+out/
