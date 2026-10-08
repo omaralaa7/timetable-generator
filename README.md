@@ -18,7 +18,7 @@ Open the address it prints, then: upload masters → check the staff list → re
 | Command | What it does |
 |---|---|
 | `npm test` | Unit tests against `samples/`, including a printed diff against the ten hand-made sheets |
-| `npm run build` | Type-check and build the static site into `dist/` |
+| `npm run build` | Type-check and build the page into the repository root (`index.html`, `assets/`) |
 | `node scripts/preview.ts [staff-id]` | Text summary of everyone, or one person's sheet |
 | `node scripts/dump-sessions.ts [--staff id] [--names]` | Sessions read from the sample masters |
 | `node scripts/export.ts` | Write every sheet from the sample masters into `out/` |
@@ -29,5 +29,6 @@ Logic lives in `src/core/` (pure modules, no DOM): `docx.ts` / `xlsx.ts` read a 
 
 ## Deploy
 
-Pushing to `main` runs `.github/workflows/deploy.yml` (test, build, publish to GitHub Pages).
-In the repository settings choose **Pages → Source: GitHub Actions** once.
+GitHub Pages serves the repository root of `main` (Settings → Pages → Deploy from a branch → main, /root).
+`npm run build` writes the built page (`index.html`, `assets/`) to the root; commit and push them to publish.
+The page source is `web/index.html`.
