@@ -193,3 +193,4 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - Lab supervision when both doctors are free: leave a doctor's preset duty time alone, then split the course's sessions evenly between the two doctors, then keep the same doctor on the same section, then balance total load.
 - Everyone must reach the minimum load; the tool tops up with office hours and advising.
 - Commits carry the owner's name only (no co-author lines).
+- Both-free order (revised 2026-10-09, supersedes the line above): 1) leave preset duty time alone, 2) prefer the doctor who already comes in that day, 3) same doctor stays with the same section, 4) split the course's sessions evenly, 5) the doctor who does not hold the other section, 6) lower total load. With this, Asmaa Radi, Mai Helmy and Ahmed Salem match their sheets' supervision fully.

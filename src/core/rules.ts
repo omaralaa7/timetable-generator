@@ -300,26 +300,30 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     }
     const open = pending.find((s) => rosterDoctors(s).some((id) => !busy(id, s)));
     if (!open) break;
-    // Both free: keep a doctor on the same section of the course, else even out the load.
+    // Both free: the tool proposes one and the user can swap on the review screen.
     const free = rosterDoctors(open).filter((id) => !busy(id, open));
     const siblings = sections.filter((x) => supervisor.has(x.id) && sectionOf(x) === sectionOf(open));
     const sameSection = siblings.find((x) => x.sections.join() === open.sections.join() && free.includes(supervisor.get(x.id)!));
     const otherSection = siblings.find((x) => x.sections.join() !== open.sections.join());
-    // The two doctors of a course share its sessions evenly (across programmes); then the rules below.
+    // Narrow the choice step by step; the first rule that separates the two doctors decides.
     const courseHours = (id: string) => sections
       .filter((x) => supervisor.get(x.id) === id && key(x.parsed.title) === key(open.parsed.title))
       .reduce((n, x) => n + x.slots.length, 0);
-    // A doctor's fixed office / advising / quality time is left alone when the other one can take the session.
     const hasDuty = (id: string) => (byId.get(id)!.presets ?? []).some((p) => !decisions.duties?.[id] && overlaps(p, open));
-    const clear = free.filter((id) => !hasDuty(id));
-    const pool = clear.length ? clear : free;
+    const comesIn = (id: string) => items.get(id)!.some((it) => it.day === open.day) ||
+      (byId.get(id)!.presets ?? []).some((p) => p.day === open.day);
+    let pool = free;
+    const prefer = (test: (id: string) => boolean) => {
+      const kept = pool.filter(test);
+      if (kept.length) pool = kept;
+    };
+    prefer((id) => !hasDuty(id)); // leave fixed office / advising / quality time alone
+    prefer(comesIn); // do not bring someone in on a day they have nothing else
+    if (sameSection) prefer((id) => id === supervisor.get(sameSection.id)); // same doctor stays with the same section
     const fewest = Math.min(...pool.map(courseHours));
-    const behind = pool.filter((id) => courseHours(id) === fewest);
-    let pick = behind.length === 1 ? behind[0] : undefined;
-    if (!pick && pool.length < free.length && sameSection && !pool.includes(supervisor.get(sameSection.id)!)) pick = behind[0];
-    if (!pick && sameSection) pick = supervisor.get(sameSection.id)!;
-    if (!pick && otherSection) pick = free.find((id) => id !== supervisor.get(otherSection.id));
-    if (!pick) pick = [...free].sort((a, b) => load(a) - load(b))[0];
+    prefer((id) => courseHours(id) === fewest); // the two doctors share a course's sessions evenly
+    if (otherSection) prefer((id) => id !== supervisor.get(otherSection.id));
+    const pick = [...pool].sort((x, y) => load(x) - load(y))[0];
     assign(open, pick);
     issues.push({
       id: `free:${open.id}`, kind: 'both-free', staffIds: free, sessionId: open.id, options: [pick, ...free.filter((id) => id !== pick)],
