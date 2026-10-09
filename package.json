@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12",
+    "cfb": "^1.2.2",
     "exceljs": "^4.4.0",
     "jszip": "^3.10.2"
   },

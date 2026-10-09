@@ -92,9 +92,9 @@ function filesView(): string {
     <section>
       <p class="lead">الخطوة ١: ضع ملفات الجداول الرئيسية لكل البرامج (اتصالات، قوى، مدني…).</p>
       <label class="drop" id="drop">
-        <input type="file" multiple accept=".docx,.doc,.xlsx,.pdf" data-act="upload" hidden>
+        <input type="file" multiple accept=".docx,.doc,.xlsx,.xls,.pdf" data-act="upload" hidden>
         <b>اسحب الملفات إلى هنا أو اضغط للاختيار</b>
-        <span>ملفات Word أو Excel — الملفات لا تغادر جهازك</span>
+        <span>ملفات Word (‎.docx أو ‎.doc) أو Excel (‎.xlsx) — الملفات لا تغادر جهازك</span>
       </label>
       <ul class="masters">${masters}</ul>
       <div class="next">
@@ -273,7 +273,7 @@ async function addFiles(files: File[]): Promise<void> {
       const data = await file.arrayBuffer();
       const programme = file.name.replace(/\.[^.]+$/, '');
       const master = await readMaster({ programme, name: file.name, data });
-      if (file.name.toLowerCase().endsWith('.xlsx')) fileData.set(file.name, data);
+      if (master.sheets) fileData.set(file.name, data);
       const stored = { programme, fileName: file.name, sheet: master.sheet, sheets: master.sheets, sessions: master.sessions, warnings: master.warnings };
       const at = project.masters.findIndex((m) => m.fileName === file.name);
       if (at >= 0) project.masters[at] = stored;

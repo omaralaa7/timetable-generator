@@ -226,3 +226,8 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - A lecture is the same lecture across masters when time and a doctor match and either the room or the course matches.
 - All five programmes now have a readable master; the remembered (preset) lectures only matter when one of them is not uploaded.
 - **جمعة عثمان = جمعه فهمى** (owner, 2026-10-09): one person, full name جمعة فهمي عثمان — the head of department. Both spellings are aliases of the same roster entry; ignore the "similar names" warning in §6 for this pair. His الالات الخاصة (ELP 4E2) lecture: ا.د. عبد الوهاب العيسوى starts, he takes weeks 9–15 (from his hand-made sheet).
+
+## 18. File formats (2026-10-09)
+- The format is detected from the file's **content**, never from its extension (`detectFormat` in `src/core/pipeline.ts`).
+- **Old binary Word `.doc` is read directly in the browser** by `src/core/doc.ts` (piece table, PAPX/CHPX, `sprmTDefTable`; container opened with the `cfb` package). Verified: the client's preparatory `.doc` (`samples/reference-doc/`) gives exactly the same 71 sessions as its Word conversion.
+- Old binary Excel `.xls` and PDF are refused with an Arabic message saying how to re-save. Only one `.doc` has been seen so far — a `.doc` with an unusual structure could still fail.

@@ -1,4 +1,6 @@
-import { readDocx } from './docx.ts';
+import JSZip from 'jszip';
+import { readDoc } from './doc.ts';
+import { readDocumentXml } from './docx.ts';
 import { matchStaff, type Staff } from './roster.ts';
 import { buildSheets, type Decisions, type Result } from './rules.ts';
 import { parseMaster } from './sessions.ts';
@@ -20,17 +22,54 @@ export interface ReadMaster extends ParsedMaster {
   sheet?: string;
 }
 
-/** Read one uploaded master. PDF and unknown formats are refused with a clear message. */
+type Format = 'docx' | 'xlsx' | 'doc' | 'xls' | 'pdf' | 'unknown';
+
+/**
+ * What the file really is, from its content — the extension is not trusted
+ * (a `.doc` may be a renamed `.docx`, and the other way round).
+ */
+export async function detectFormat(data: ArrayBuffer | Uint8Array): Promise<Format> {
+  const b = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const starts = (...sig: number[]) => sig.every((x, i) => b[i] === x);
+  if (starts(0x25, 0x50, 0x44, 0x46)) return 'pdf';
+  if (starts(0x50, 0x4b)) {
+    const zip = await JSZip.loadAsync(b).catch(() => null);
+    if (zip?.file('word/document.xml')) return 'docx';
+    if (zip?.file('xl/workbook.xml')) return 'xlsx';
+    return 'unknown';
+  }
+  if (starts(0xd0, 0xcf, 0x11, 0xe0)) {
+    // Old Office container: Word has a `WordDocument` stream, Excel a `Workbook` one (names are UTF-16).
+    const has = (name: string) => {
+      const sig = [...name].flatMap((ch) => [ch.charCodeAt(0), 0]);
+      for (let i = 0; i + sig.length <= b.length; i += 64) {
+        if (sig.every((x, k) => b[i + k] === x)) return true;
+      }
+      return false;
+    };
+    if (has('WordDocument')) return 'doc';
+    if (has('Workbook') || has('Book')) return 'xls';
+  }
+  return 'unknown';
+}
+
+/** Read one uploaded master, whatever Word/Excel format it is in. PDF is refused with a clear message. */
 export async function readMaster(file: MasterFile): Promise<ReadMaster> {
-  const ext = file.name.toLowerCase().split('.').pop();
-  if (ext === 'docx') return parseMaster(await readDocx(file.data), file.programme);
-  if (ext === 'xlsx') {
+  const format = await detectFormat(file.data);
+  if (format === 'docx') {
+    const zip = await JSZip.loadAsync(file.data);
+    return parseMaster(readDocumentXml(await zip.file('word/document.xml')!.async('string')), file.programme);
+  }
+  if (format === 'doc') return parseMaster(readDoc(file.data), file.programme);
+  if (format === 'xlsx') {
     const { table, sheets, sheet } = await readXlsx(file.data, file.sheet);
     return { ...parseMaster([table], file.programme), sheets, sheet };
   }
-  if (ext === 'doc') throw new Error(`«${file.name}»: هذا ملف Word بالصيغة القديمة (‎.doc). افتحه في Word ثم: ملف ← حفظ باسم ← اختر النوع «Word Document (‎.docx)» وارفع الملف الجديد`);
-  if (ext === 'pdf') throw new Error(`«${file.name}»: ملفات PDF غير مدعومة — برجاء رفع ملف Word أو Excel الأصلي`);
-  throw new Error(`«${file.name}»: صيغة غير مدعومة — المطلوب ‎.docx أو ‎.xlsx`);
+  if (format === 'xls') {
+    throw new Error(`«${file.name}»: هذا ملف Excel بالصيغة القديمة (‎.xls). افتحه في Excel ثم: ملف ← حفظ باسم ← «Excel Workbook (‎.xlsx)» وارفع الملف الجديد`);
+  }
+  if (format === 'pdf') throw new Error(`«${file.name}»: ملفات PDF غير مدعومة — برجاء رفع ملف Word أو Excel الأصلي`);
+  throw new Error(`«${file.name}»: صيغة غير مدعومة — المطلوب ملف Word أو Excel`);
 }
 
 export function generate(masters: ParsedMaster[], roster: Staff[], decisions: Decisions = {}): Result {

@@ -137,3 +137,26 @@ test('roster: similar names stay apart, one-word names are not guessed', () => {
   assert.deepEqual([...ids('مايسة')], [null]);
   assert.equal(of('tamer-elsharkawy', 'section', power).length > 10, true);
 });
+
+test('old binary .doc gives exactly the same sessions as its .docx conversion', async () => {
+  const { readMaster } = await import('../src/core/pipeline.ts');
+  const root = join(import.meta.dirname, '..', 'samples');
+  const doc = await readMaster({ programme: 'prep', name: 'x.doc', data: readFileSync(join(root, 'reference-doc', 'preparatory_2026-27.doc')) });
+  const docx = await readMaster({ programme: 'prep', name: 'x.docx', data: readFileSync(join(root, 'masters', 'preparatory_2026-27.docx')) });
+  const sig = (m: ParsedMaster) => m.sessions.map((s) => `${s.day}:${s.slots.join(',')}|${s.sections.join('+')}|${s.text}`).sort();
+  assert.ok(doc.sessions.length > 60);
+  assert.deepEqual(sig(doc), sig(docx));
+});
+
+test('the format is read from the content, not from the file name', async () => {
+  const { detectFormat, readMaster } = await import('../src/core/pipeline.ts');
+  const root = join(import.meta.dirname, '..', 'samples');
+  assert.equal(await detectFormat(readFileSync(join(root, 'masters', 'comms_2026-27.docx'))), 'docx');
+  assert.equal(await detectFormat(readFileSync(join(root, 'masters', 'civil_2026-27.xlsx'))), 'xlsx');
+  assert.equal(await detectFormat(readFileSync(join(root, 'reference-doc', 'preparatory_2026-27.doc'))), 'doc');
+  assert.equal(await detectFormat(readFileSync(join(root, 'reference-pdf', 'mechanical_power_2026-27.pdf'))), 'pdf');
+  // a .docx saved under the wrong extension still reads
+  const wrong = await readMaster({ programme: 'c', name: 'comms.doc', data: readFileSync(join(root, 'masters', 'comms_2026-27.docx')) });
+  assert.equal(wrong.sessions.length, 88);
+  await assert.rejects(readMaster({ programme: 'p', name: 'p.pdf', data: readFileSync(join(root, 'reference-pdf', 'mechanical_power_2026-27.pdf')) }), /PDF/);
+});
