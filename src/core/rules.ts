@@ -1,5 +1,6 @@
 import { nameKey, normalize } from './normalize.ts';
 import type { Preset, Staff } from './roster.ts';
+import { SEED_STARTS } from './seedStarts.ts';
 import type { NameToken, ParsedText, Rank, Session } from './types.ts';
 
 export type ItemType = 'lecture' | 'supervision' | 'section' | 'office' | 'advising' | 'quality';
@@ -244,6 +245,8 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
         const told = CLIENT_STARTS.find((c) => c.code === p.code && (!c.subtitle || key(c.subtitle) === key(p.subtitle)));
         const starter = told && doctors.find((t) => nameKey(t.name) === nameKey(told.first));
         if (starter) first = idOf(starter);
+        // Last resort: what an earlier, underlined copy of the masters said for this course.
+        else if (doctors.some((t) => idOf(t) === SEED_STARTS[ck])) first = SEED_STARTS[ck];
       }
       if (!first && !issues.some((i) => i.id === `start:${ck}`)) {
         issues.push({

@@ -214,3 +214,7 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - Each lecture is given twice (once per group). MAT 001 and HUM 002 have no underline; who starts is taken from the hand-made sheets (`CLIENT_STARTS`): جمعه فهمى and أسماء عبدالرحيم.
 - Remembered (preset) lectures are dropped automatically once a master provides the same course.
 - Open: Dr. Gomaa's MAT 001 lecture for group 1 (Sunday 10:45) clashes with his ELP 441 lecture in power.
+
+## 16. Corrected power master received (2026-10-09)
+- `samples/masters/power_2026-27.docx` is now the client's new file: م. تامر removed from the Monday `اختيارى 4 الالات الخاصة` lab (his double booking is gone). The orphan `/ Lab 825` cell is still there.
+- **Her working copy has no underlines on six lectures** (ELP 351, 441, 421, 422, 331, 321) that the earlier corrected copy had. That copy is kept as `samples/reference-docx/power_2026-27_underlined.docx`, and `src/core/seedStarts.ts` (regenerate with `node scripts/seed-starts.ts`) remembers who starts each two-doctor lecture. Order of trust: review choice → underline in the uploaded master → same course in another uploaded master → `CLIENT_STARTS` → `SEED_STARTS`.
