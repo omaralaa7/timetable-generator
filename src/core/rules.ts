@@ -344,14 +344,9 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     });
     pending = pending.filter((s) => s !== open);
   }
-  // A doctor from another department is listed too: assume they take what ours cannot.
-  const hasOutsider = (s: Session) => s.parsed.names.some((t) => t.role === 'doctor' && !t.staffId);
-  for (const s of pending.filter((x) => !hasOutsider(x))) {
-    issues.push({
-      id: `conflict:${s.id}`, kind: 'conflict', staffIds: rosterDoctors(s), sessionId: s.id, options: rosterDoctors(s),
-      message: `«${s.text}»: لا يوجد دكتور متاح للإشراف (محاضرة أخرى أو انتداب)`,
-    });
-  }
+  // Sessions left in `pending` have no listed doctor free. The committee's rule (client, 2026-10-09):
+  // a doctor supervises only where free and in the faculty, so these simply get no supervisor
+  // from the department — it is not a problem to resolve, and nothing is reported.
   for (const s of sessions.filter((x) => x.parsed.type === 'project' && rosterDoctors(x).length)) {
     issues.push({ id: `project:${s.id}`, kind: 'project', staffIds: rosterDoctors(s), sessionId: s.id, message: `مشروع التخرج يحتاج مراجعة: «${s.text}»` });
   }

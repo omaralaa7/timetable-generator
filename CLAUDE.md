@@ -202,3 +202,5 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - **Masters win over the old individual sheets** (rooms, the civil MAT 101 lecture — which the old sheet had missed).
 - **Who starts:** طرق عددية (MAT 201) → د. أسماء عبدالرحيم; اختيارى 1 نظم القياسات (ELP 3E1) → she *believes* د. سيد محمد أحمد (not certain). Coded as `CLIENT_STARTS` in `src/core/rules.ts`; an underline in the master or a review choice overrides it.
 - **Errors in the power master she will fix herself:** the orphan `/ Lab 825` cell (Sunday, level 1, section 2) and م. تامر listed in two labs at once.
+- **No listed doctor free for a lab** (same voice notes): a doctor takes a lab only when free and in the faculty that day, so such a session gets no department supervisor. It is not a review item — the tool no longer lists these.
+- **نظم القياسات start:** she said to confirm it with د. أسماء عبدالرحيم.
