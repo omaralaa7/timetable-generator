@@ -5,6 +5,7 @@ import { matchStaff, type Staff } from './roster.ts';
 import { buildSheets, type Decisions, type Result } from './rules.ts';
 import { parseMaster } from './sessions.ts';
 import type { ParsedMaster } from './types.ts';
+import { readXls } from './xls.ts';
 import { readXlsx } from './xlsx.ts';
 
 export interface MasterFile {
@@ -53,7 +54,10 @@ export async function detectFormat(data: ArrayBuffer | Uint8Array): Promise<Form
   return 'unknown';
 }
 
-/** Read one uploaded master, whatever Word/Excel format it is in. PDF is refused with a clear message. */
+/**
+ * Read one uploaded master, whatever Word/Excel format it is in: .docx/.docm/.dotx, .xlsx/.xlsm/.xltx,
+ * and the old binary .doc/.dot/.wps and .xls/.xlt/.et. PDF is refused with a clear message.
+ */
 export async function readMaster(file: MasterFile): Promise<ReadMaster> {
   const format = await detectFormat(file.data);
   if (format === 'docx') {
@@ -66,10 +70,11 @@ export async function readMaster(file: MasterFile): Promise<ReadMaster> {
     return { ...parseMaster([table], file.programme), sheets, sheet };
   }
   if (format === 'xls') {
-    throw new Error(`«${file.name}»: هذا ملف Excel بالصيغة القديمة (‎.xls). افتحه في Excel ثم: ملف ← حفظ باسم ← «Excel Workbook (‎.xlsx)» وارفع الملف الجديد`);
+    const { table, sheets, sheet } = readXls(file.data, file.sheet);
+    return { ...parseMaster([table], file.programme), sheets, sheet };
   }
   if (format === 'pdf') throw new Error(`«${file.name}»: ملفات PDF غير مدعومة — برجاء رفع ملف Word أو Excel الأصلي`);
-  throw new Error(`«${file.name}»: صيغة غير مدعومة — المطلوب ملف Word أو Excel`);
+  throw new Error(`«${file.name}»: صيغة غير مدعومة — المطلوب ملف Word أو Excel (احفظه بصيغة ‎.docx أو ‎.xlsx)`);
 }
 
 export function generate(masters: ParsedMaster[], roster: Staff[], decisions: Decisions = {}): Result {

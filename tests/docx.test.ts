@@ -160,3 +160,20 @@ test('the format is read from the content, not from the file name', async () => 
   assert.equal(wrong.sessions.length, 88);
   await assert.rejects(readMaster({ programme: 'p', name: 'p.pdf', data: readFileSync(join(root, 'reference-pdf', 'mechanical_power_2026-27.pdf')) }), /PDF/);
 });
+
+test('old binary .xls and macro-enabled .xlsm give the same sessions as the .xlsx', async () => {
+  const { readMaster, detectFormat } = await import('../src/core/pipeline.ts');
+  const root = join(import.meta.dirname, '..', 'samples');
+  const sig = (m: ParsedMaster) => m.sessions.map((s) => `${s.day}:${s.slots.join(',')}|L${s.level}|${s.sections.join('+')}|${s.text}`).sort();
+  for (const name of ['civil_2026-27', 'mechanical_2026-27']) {
+    const xlsx = await readMaster({ programme: 'p', name: 'x.xlsx', data: readFileSync(join(root, 'masters', `${name}.xlsx`)) });
+    const xlsData = readFileSync(join(root, 'reference-xls', `${name}.xls`));
+    assert.equal(await detectFormat(xlsData), 'xls');
+    const xls = await readMaster({ programme: 'p', name: 'x.et', data: xlsData });
+    assert.ok(xls.sessions.length > 40, `${name}: ${xls.sessions.length}`);
+    assert.deepEqual(sig(xls), sig(xlsx), name);
+    assert.equal(xls.sheet, xlsx.sheet);
+  }
+  const xlsm = await readMaster({ programme: 'p', name: 'x.xlsm', data: readFileSync(join(root, 'reference-xls', 'civil_2026-27.xlsm')) });
+  assert.equal(xlsm.sessions.length, 93);
+});

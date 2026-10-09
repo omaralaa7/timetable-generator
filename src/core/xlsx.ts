@@ -35,10 +35,14 @@ function sheetText(ws: ExcelJS.Worksheet, rows = 8): string {
   return `${ws.name} ${text}`;
 }
 
-/** The newest academic year mentioned in the sheet's name or heading (e.g. 2026 for `2026-2027`). */
-function sheetYear(ws: ExcelJS.Worksheet): number {
-  const years = [...sheetText(ws).matchAll(/20\d\d/g)].map((m) => Number(m[0]));
+/** The academic year mentioned in a sheet's name or heading (2026 for `2026-2027`), 0 if none. */
+export function academicYear(text: string): number {
+  const years = [...text.matchAll(/20\d\d/g)].map((m) => Number(m[0]));
   return years.length ? Math.min(...years) : 0;
+}
+
+function sheetYear(ws: ExcelJS.Worksheet): number {
+  return academicYear(sheetText(ws));
 }
 
 /**
