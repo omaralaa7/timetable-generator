@@ -149,9 +149,18 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     byId.get(id)!.secondmentDay === at.day || items.get(id)!.some((it) => overlaps(it, at)) ||
     at.slots.some((s) => decisions.edits?.[id]?.[`${at.day}:${s}`]); // a cell the user filled by hand
 
-  const place = (id: string, item: GridItem, what: string) => {
+  // Weeks of each placed lecture, to tell a real clash from two half-term lectures sharing a slot.
+  const lectureWeeks = new Map<GridItem, string>();
+  const place = (id: string, item: GridItem, what: string, weeks = '') => {
     const staff = byId.get(id)!;
     const clash = items.get(id)!.find((it) => overlaps(it, item));
+    if (weeks) lectureWeeks.set(item, weeks);
+    const halves = [weeks, clash ? lectureWeeks.get(clash) : ''].sort().join('|');
+    if (clash && halves === '1 - 7|9 - 15') {
+      // One lecture in weeks 1–7 and another in weeks 9–15 at the same time is not a clash.
+      // The hand-made sheets show a single lecture in that cell: the one placed first stays.
+      return;
+    }
     if (clash) {
       issues.push({
         id: `overlap:${id}:${item.sessionId}`, kind: 'overlap', staffIds: [id], sessionId: item.sessionId,
@@ -265,7 +274,7 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       const share = doctors.length <= 1 ? 1 : Math.round(100 / doctors.length) / 100;
       const weeks = doctors.length <= 1 ? '1 - 15' : doctors.length > 2 || !first ? '؟' : first === id ? '1 - 7' : '9 - 15';
       if (!courses.get(id)!.has(ck)) courses.get(id)!.set(ck, { key: ck, name: courseName(p), share, weeks, order: order++ });
-      place(id, { day: s.day, slots: s.slots, type: 'lecture', text: lectureText(p), sessionId: s.id, origin: 'master' }, lectureText(p));
+      place(id, { day: s.day, slots: s.slots, type: 'lecture', text: lectureText(p), sessionId: s.id, origin: 'master' }, lectureText(p), weeks);
     }
   }
 
