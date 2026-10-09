@@ -176,7 +176,7 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 ## 11. Open questions (build so these are settings, not code changes)
 1. **`النصاب` row** — **ANSWERED (client, 2026-10-08): keep it as in the individual sheets** → counted values (lectures / office / supervision / advising), quality cell empty, total = `SUM` without quality; editable per person. Background: in 5 samples it equals the counted values; in 5 others it holds different numbers (e.g. Gomaa 6/8/20/0). Default: copy counted values; ask the client what it should be.
 2. **ANSWERED (corrected 2026-10-09): د. محمد سعيد and د. ايمان شوقى are from other faculties — NOT in the roster, no sheets.** Still open: membership of the "detected" names in §6.
-3. Ahmed Salem's advising — **ANSWERED (2026-10-09): follow his sheet** → advisor, 4 hours (the sample wins over the voice note). Everyone must reach the minimum load; the tool tops up with office hours (and advising for advisors).
+3. Advising — **ANSWERED (client, twice; final 2026-10-09): د. أحمد سالم, ا.د. محمود السد and ا.م.د. جمعه فهمى have NO advising**, whatever their old sheets show. Everyone must reach the minimum load; the tool tops up with office hours (and advising for advisors).
 4. Who starts Power Network Analysis (ELP 421): the corrected master underlines **Gomaa Fahmy** (matches both people's sheets); the client said Mahmoud in a voice note.
 
 ## 12. Suggested build order

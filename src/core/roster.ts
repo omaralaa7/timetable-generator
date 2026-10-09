@@ -54,8 +54,8 @@ const BASE: Staff[] = [
 
 // Office / advising / quality hours as on the hand-made sheets (brief §10).
 const HOURS: Record<string, [number, number, number]> = {
-  'asmaa-radi': [4, 4, 2], 'ahmed-salem': [4, 4, 2], 'mai-helmy': [5, 4, 2], 'hend-elsayed': [4, 4, 2],
-  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [5, 6, 5], 'mahmoud-elsadd': [6, 6, 4], 'gomaa-fahmy': [8, 1, 4],
+  'asmaa-radi': [4, 4, 2], 'ahmed-salem': [4, 0, 2], 'mai-helmy': [5, 4, 2], 'hend-elsayed': [4, 4, 2],
+  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [5, 6, 5], 'mahmoud-elsadd': [6, 0, 4], 'gomaa-fahmy': [8, 0, 4],
   'eman-awad': [6, 5, 2], 'tamer-elsharkawy': [0, 6, 5],
 };
 
