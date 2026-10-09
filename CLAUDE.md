@@ -232,3 +232,8 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - **Old binary Word `.doc` is read directly in the browser** by `src/core/doc.ts` (piece table, PAPX/CHPX, `sprmTDefTable`; container opened with the `cfb` package). Verified: the client's preparatory `.doc` (`samples/reference-doc/`) gives exactly the same 71 sessions as its Word conversion.
 - Old binary Excel `.xls` and PDF are refused with an Arabic message saying how to re-save. Only one `.doc` has been seen so far — a `.doc` with an unusual structure could still fail.
 - **Old binary Excel `.xls` (and WPS `.et`) is read in the browser** by `src/core/xls.ts` (BIFF8: shared strings incl. rich-text runs, merged ranges, column widths, hidden rows/columns). Verified against `.xls` copies of the civil and mechanics masters saved by Excel (`samples/reference-xls/`): identical sessions to the `.xlsx`. Macro-enabled/template variants (`.xlsm`, `.xltx`, `.docm`, `.dotx`) work because they are the same containers. Not supported: PDF, OpenDocument (`.odt`/`.ods`), `.rtf`, `.xlsb`. Not yet seen: a file actually saved by WPS Office.
+
+## 19. Page design (2026-10-09)
+- Steps: upload → individual sheets → optional decisions → settings. Inline SVG icons (`src/ui/icons.ts`, Lucide paths, no network), coloured primary / Excel-green download buttons, stat cards for the totals.
+- Phones (≤760px): the weekly grid is replaced by a per-day list (`dayList`), with "+ إضافة" to fill a free slot; touch targets ≥44px; inputs 16px (no iOS zoom); nothing scrolls sideways.
+- Owner removed the project-file / start-over section on purpose (too distracting for the client).

@@ -5,6 +5,7 @@ import { type GridItem, type Issue, type ItemType, type Result, type StaffSheet 
 import { SLOT_LABELS } from '../core/slots.ts';
 import type { Rank } from '../core/types.ts';
 import { sheetFileName, writeSheet } from '../core/writer.ts';
+import { icon, type IconName } from './icons.ts';
 import { loadProject, saveProject, type Project } from './state.ts';
 
 type Tab = 'files' | 'sheets' | 'issues' | 'settings';
@@ -59,50 +60,67 @@ function download(name: string, data: BlobPart, type: string): void {
 function render(): void {
   const ready = project.masters.length > 0;
   const open = result.issues.length;
-  const tabs: [Tab, string, boolean][] = [
-    ['files', '١ · رفع الجداول الرئيسية', true],
-    ['sheets', '٢ · الجداول الفردية', ready],
-    ['issues', `٣ · قرارات اختيارية${ready && open ? ` (${open})` : ''}`, ready],
-    ['settings', '⚙ الإعدادات', true],
+  const tabs: [Tab, IconName, string, string, boolean][] = [
+    ['files', 'upload', 'رفع الجداول الرئيسية', 'الرفع', true],
+    ['sheets', 'users', 'الجداول الفردية', 'الجداول', ready],
+    ['issues', 'checks', 'قرارات اختيارية', 'قرارات', ready],
+    ['settings', 'settings', 'الإعدادات', 'الإعدادات', true],
   ];
   root.innerHTML = `
-    <header><h1>مولّد الجداول الفردية</h1></header>
-    <nav>${tabs.map(([id, label, on]) => `<button data-tab="${id}" class="${id === tab ? 'on' : ''}" ${on ? '' : 'disabled'}>${label}</button>`).join('')}</nav>
-    ${message ? `<p class="note">${esc(message)}</p>` : ''}
+    <header class="top">
+      <span class="logo">${icon('calendar', 26)}</span>
+      <div>
+        <h1>مولّد الجداول الفردية</h1>
+        <p>من الجداول الرئيسية إلى جدول الأعباء لكل عضو — تلقائياً</p>
+      </div>
+    </header>
+    <nav class="steps" aria-label="الخطوات">${tabs.map(([id, ic, label, short, on], n) => `
+      <button data-tab="${id}" class="${id === tab ? 'on' : ''}" ${on ? '' : 'disabled'} ${id === tab ? 'aria-current="step"' : ''}>
+        <span class="num">${n < 3 ? n + 1 : icon(ic, 15)}</span>
+        <span class="full">${label}</span><span class="short">${short}</span>
+        ${id === 'issues' && ready && open ? `<span class="badge">${open}</span>` : ''}
+      </button>`).join('')}</nav>
+    ${message ? `<p class="note" role="status">${icon('info')}<span>${esc(message)}</span></p>` : ''}
     <main>${{ files: filesView, sheets: sheetsView, issues: issuesView, settings: settingsView }[tab]()}</main>
+    <footer>${icon('lock', 14)} كل المعالجة تتم داخل متصفحك — الملفات لا تُرفع إلى أي خادم.</footer>
     <dialog id="editor"></dialog>`;
 }
 
 function filesView(): string {
-  const masters = project.masters.map((m, i) => `
+  const masters = project.masters.map((m, i) => {
+    const excel = !!m.sheets;
+    return `
     <li>
-      <div class="row">
-        <span class="ok">✓</span>
+      <span class="filetype ${excel ? 'xl' : 'wd'}">${icon(excel ? 'excel' : 'word', 22)}</span>
+      <div class="fileinfo">
         <strong>${esc(m.fileName)}</strong>
-        <span class="hint">${m.sessions.length} حصة</span>
-        ${m.sheets && m.sheets.length > 1 ? `<label>الورقة:
+        <span class="hint">${icon('check', 14)} تمت القراءة — ${m.sessions.length} حصة</span>
+        ${m.sheets && m.sheets.length > 1 ? `<label class="inline">الورقة:
           <select data-act="sheet" data-i="${i}" ${fileData.has(m.fileName) ? '' : 'disabled title="أعد رفع الملف لتغيير الورقة"'}>
             ${m.sheets.map((s) => `<option ${s === m.sheet ? 'selected' : ''}>${esc(s)}</option>`).join('')}
           </select></label>` : ''}
-        <button data-act="remove-master" data-i="${i}" class="link danger">حذف</button>
+        ${m.warnings.length ? `<details><summary class="small">${m.warnings.length} خانة لم تُفهم (للاطلاع فقط)</summary><ul>${m.warnings.map((w) => `<li>${esc(w.message)}</li>`).join('')}</ul></details>` : ''}
       </div>
-      ${m.warnings.length ? `<details><summary class="small">${m.warnings.length} خانة لم تُفهم (للاطلاع فقط)</summary><ul>${m.warnings.map((w) => `<li>${esc(w.message)}</li>`).join('')}</ul></details>` : ''}
-    </li>`).join('');
+      <button data-act="remove-master" data-i="${i}" class="iconbtn danger" title="حذف الملف" aria-label="حذف ${esc(m.fileName)}">${icon('trash')}</button>
+    </li>`;
+  }).join('');
   return `
     <section>
-      <p class="lead">الخطوة ١: ضع ملفات الجداول الرئيسية لكل البرامج (اتصالات، قوى، مدني…).</p>
+      <h2>${icon('upload', 20)} ارفع الجداول الرئيسية</h2>
+      <p class="lead">ضع ملفات الجداول الرئيسية لكل البرامج: اتصالات، قوى، مدني، ميكانيكا، إعدادي.</p>
       <label class="drop" id="drop">
         <input type="file" multiple accept=".docx,.doc,.docm,.dotx,.dot,.wps,.xlsx,.xls,.xlsm,.xltx,.xlt,.et,.pdf" data-act="upload" hidden>
+        <span class="dropicon">${icon('upload', 34)}</span>
         <b>اسحب الملفات إلى هنا أو اضغط للاختيار</b>
-        <span>ملفات Word أو Excel بأي صيغة (docx, doc, xlsx, xls, ملفات WPS) — الملفات لا تغادر جهازك</span>
+        <span>ملفات Word أو Excel بأي صيغة <bdi dir="ltr">(docx, doc, xlsx, xls, WPS)</bdi></span>
       </label>
-      <ul class="masters">${masters}</ul>
+      ${masters ? `<ul class="masters">${masters}</ul>` : ''}
       <div class="next">
-        <button data-act="process" class="primary big" ${project.masters.length ? '' : 'disabled'}>إنشاء الجداول الفردية ←</button>
+        <button data-act="process" class="primary big" ${project.masters.length ? '' : 'disabled'}>إنشاء الجداول الفردية ${icon('forward', 20)}</button>
         ${project.masters.length ? '' : '<span class="hint">ارفع ملفاً واحداً على الأقل أولاً</span>'}
       </div>
       <details class="guide">
-        <summary>طريقة الاستخدام</summary>
+        <summary>${icon('book')} طريقة الاستخدام</summary>
         <ol>
           <li><b>ارفع الجداول الرئيسية</b> ثم اضغط «إنشاء الجداول الفردية».</li>
           <li><b>الجداول الفردية</b>: اختر العضو لترى جدوله، واضغط «تنزيل كل الجداول» للحصول على ملفات Excel.</li>
@@ -117,35 +135,51 @@ function filesView(): string {
 function issueCard(i: Issue): string {
   const buttons = (i.options ?? []).map((o, n) => {
     const label = i.labels?.[o] ?? o;
-    const text = i.kind === 'no-underline' ? `يبدأ: ${label}` : i.kind === 'both-free' && n === 0 ? `✓ ${label}` : label;
-    return `<button data-act="fix" data-id="${esc(i.id)}" data-opt="${esc(o)}" class="${i.kind === 'both-free' && n === 0 ? 'primary' : ''}">${esc(text)}</button>`;
+    const proposed = i.kind === 'both-free' && n === 0;
+    const text = i.kind === 'no-underline' ? `يبدأ: ${label}` : label;
+    return `<button data-act="fix" data-id="${esc(i.id)}" data-opt="${esc(o)}" class="${proposed ? 'primary' : ''}">${proposed ? icon('check', 16) : ''}${esc(text)}</button>`;
   }).join('');
   const none = i.kind === 'conflict' ? `<button data-act="fix" data-id="${esc(i.id)}" data-opt="none">لا أحد من القسم</button>` : '';
   const go = i.staffIds.length ? `<button data-act="person" data-id="${esc(i.staffIds[0])}" class="link">عرض الجدول</button>` : '';
   return `<li><p>${esc(i.message)}</p><div class="row">${buttons}${none}${go}<button data-act="dismiss" data-id="${esc(i.id)}" class="link">تجاهل</button></div></li>`;
 }
 
+const range = (slots: number[]) => `${SLOT_LABELS[slots[0]].slice(0, 5)} – ${SLOT_LABELS[slots[slots.length - 1]].slice(6)}`;
+
+/** Wide screens: the week as one table, like the Excel sheet. */
 function gridTable(sheet: StaffSheet): string {
   const rows = DAY_NAMES.map((name, day) => {
-    if (sheet.staff.secondmentDay === day) return `<tr><th>${name}</th><td colspan="10" class="secondment">انتداب</td><td></td></tr>`;
+    if (sheet.staff.secondmentDay === day) return `<tr><th scope="row">${name}</th><td colspan="10" class="secondment">انتداب</td><td class="total"></td></tr>`;
     let cells = '';
     const taken = new Set<number>();
     for (let slot = 0; slot < 10; slot++) {
       if (taken.has(slot)) continue;
       const item = sheet.items.find((it) => it.day === day && it.slots.includes(slot));
       if (!item) {
-        cells += `<td data-cell="${day}:${slot}" class="free"></td>`;
+        cells += `<td data-cell="${day}:${slot}" class="free" title="اضغط للإضافة"></td>`;
         continue;
       }
       let span = 0;
       while (item.slots.includes(slot + span) && !taken.has(slot + span)) taken.add(slot + span++);
-      cells += `<td data-cell="${day}:${slot}" colspan="${span}" class="t-${item.type}">${esc(item.text)}</td>`;
+      cells += `<td data-cell="${day}:${slot}" colspan="${span}" class="t-${item.type}" title="اضغط للتعديل">${esc(item.text)}</td>`;
     }
-    return `<tr><th>${name}</th>${cells}<td class="total">${sheet.daily[day] || ''}</td></tr>`;
+    return `<tr><th scope="row">${name}</th>${cells}<td class="total">${sheet.daily[day] || ''}</td></tr>`;
   }).join('');
-  return `<div class="scroll"><table class="grid">
+  return `<div class="scroll wide"><table class="grid">
     <thead><tr><th></th>${SLOT_LABELS.map((l) => `<th>${l}</th>`).join('')}<th>المجموع</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
+}
+
+/** Phones: the same week as a list per day, so nothing has to be scrolled sideways. */
+function dayList(sheet: StaffSheet): string {
+  return `<div class="daylist">${DAY_NAMES.map((name, day) => {
+    const items = sheet.items.filter((it) => it.day === day);
+    const body = sheet.staff.secondmentDay === day
+      ? '<p class="secondment">انتداب</p>'
+      : `${items.map((it) => `<button data-cell="${day}:${it.slots[0]}" class="slot t-${it.type}"><span class="time">${icon('clock', 13)} ${range(it.slots)}</span><span>${esc(it.text)}</span></button>`).join('') || '<p class="hint">لا شيء</p>'}
+         <button data-act="add-cell" data-day="${day}" class="link">${icon('plus', 15)} إضافة</button>`;
+    return `<div class="day"><h4>${name}${sheet.daily[day] ? `<span class="badge soft">${sheet.daily[day]} ساعة</span>` : ''}</h4>${body}</div>`;
+  }).join('')}</div>`;
 }
 
 function personView(sheet: StaffSheet): string {
@@ -154,32 +188,42 @@ function personView(sheet: StaffSheet): string {
   const edited = !!(project.decisions.edits?.[sheet.staff.id] || project.decisions.duties?.[sheet.staff.id] || project.decisions.courses?.[sheet.staff.id]);
   const courses = sheet.courses.map((c, i) => `
     <tr data-i="${i}">
-      <td><input data-c="name" value="${esc(c.name)}"></td>
-      <td><input data-c="share" type="number" min="0" max="1" step="0.05" value="${c.share}"></td>
-      <td><input data-c="weeks" value="${esc(c.weeks)}"></td>
-      <td><button data-act="remove-course" data-i="${i}" class="danger">✕</button></td>
+      <td><input data-c="name" value="${esc(c.name)}" aria-label="المقرر"></td>
+      <td><input data-c="share" type="number" min="0" max="1" step="0.05" value="${c.share}" aria-label="نسبة المشاركة"></td>
+      <td><input data-c="weeks" value="${esc(c.weeks)}" aria-label="الأسابيع"></td>
+      <td><button data-act="remove-course" data-i="${i}" class="iconbtn danger" title="حذف المقرر" aria-label="حذف المقرر">${icon('close', 16)}</button></td>
     </tr>`).join('');
+  const stat = (label: string, value: number | string, cls = '') => `<div class="stat ${cls}"><b>${value}</b><span>${label}</span></div>`;
   return `
     <div class="person">
-      <div class="row">
-        <h3>${esc(sheet.staff.name)} — ${RANKS[sheet.staff.rank]}</h3>
-        <button data-act="download-one" data-id="${esc(sheet.staff.id)}">تنزيل هذا الجدول (Excel)</button>
-        ${edited ? `<button data-act="reset-person" data-id="${esc(sheet.staff.id)}" class="link">إلغاء تعديلاتي</button>` : ''}
+      <div class="personhead">
+        <div>
+          <h3>${esc(sheet.staff.name)}</h3>
+          <span class="hint">${RANKS[sheet.staff.rank]}</span>
+        </div>
+        <div class="row">
+          ${edited ? `<button data-act="reset-person" data-id="${esc(sheet.staff.id)}" class="link">${icon('undo', 15)} إلغاء تعديلاتي</button>` : ''}
+          <button data-act="download-one" data-id="${esc(sheet.staff.id)}" class="excel">${icon('download')} تنزيل هذا الجدول (Excel)</button>
+        </div>
+      </div>
+      <div class="stats">
+        ${stat(isTa ? 'تمرين / عملي' : 'المحاضرات', t.teaching)}
+        ${stat('الساعات المكتبية', t.office)}
+        ${stat('ساعات الإشراف', t.supervision)}
+        ${stat('الإرشاد الأكاديمي', t.advising)}
+        ${stat('الجودة', t.quality)}
+        ${stat('النصاب (بدون الجودة)', `${t.counted} / ${t.minimum}`, t.counted < t.minimum ? 'bad' : 'good')}
       </div>
       ${gridTable(sheet)}
-      <p class="hint"><span class="key t-lecture">محاضرة</span> <span class="key t-supervision">إشراف</span> <span class="key t-office">مكتبية / ارشاد / جودة</span> — للتعديل اضغط على أي خانة.</p>
-      <table class="totals">
-        <tr><th>${isTa ? 'تمرين/عملي' : 'المحاضرات'}</th><th>الساعات المكتبية</th><th>ساعات الإشراف</th><th>الإرشاد الأكاديمي</th><th>الجودة</th><th>النصاب (بدون الجودة)</th></tr>
-        <tr><td>${t.teaching}</td><td>${t.office}</td><td>${t.supervision}</td><td>${t.advising}</td><td>${t.quality}</td>
-          <td class="${t.counted < t.minimum ? 'bad' : 'good'}">${t.counted} من ${t.minimum}</td></tr>
-      </table>
+      ${dayList(sheet)}
+      <p class="legend"><span class="key t-lecture">محاضرة</span><span class="key t-supervision">إشراف</span><span class="key t-office">مكتبية / ارشاد / جودة</span><span class="hint">${icon('edit', 14)} للتعديل اضغط على أي خانة</span></p>
       <details>
         <summary>المقررات المشارك فيها (${sheet.courses.length})</summary>
-        <table class="courses">
+        <div class="scroll"><table class="courses">
           <thead><tr><th>المقرر</th><th>نسبة المشاركة</th><th>الأسابيع</th><th></th></tr></thead>
           <tbody>${courses}</tbody>
-        </table>
-        <button data-act="add-course">+ إضافة مقرر</button>
+        </table></div>
+        <button data-act="add-course">${icon('plus', 16)} إضافة مقرر</button>
       </details>
     </div>`;
 }
@@ -190,14 +234,15 @@ function sheetsView(): string {
   return `
     <section>
       <div class="done">
-        <div>
-          <b>تم إنشاء ${result.sheets.length} جدولاً فردياً.</b>
-          ${open ? `<span class="hint">يوجد ${open} قرار اختياري — <button data-tab="issues" class="link">عرضها</button></span>` : ''}
+        <span class="doneicon">${icon('check', 28)}</span>
+        <div class="grow">
+          <b>تم إنشاء ${result.sheets.length} جدولاً فردياً</b>
+          ${open ? `<span class="hint">يوجد ${open} قرار اختياري — <button data-tab="issues" class="link">عرضها</button></span>` : '<span class="hint">كل شيء جاهز للتنزيل</span>'}
         </div>
-        <button data-act="download-all" class="primary big">⬇ تنزيل كل الجداول (ملف مضغوط)</button>
+        <button data-act="download-all" class="primary big">${icon('download', 20)} تنزيل كل الجداول</button>
       </div>
-      <p class="lead">اختر عضواً لمعاينة جدوله:</p>
-      <div class="people">${result.sheets.map((s) => `<button data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)}</button>`).join('')}</div>
+      <h2>${icon('users', 20)} معاينة جدول عضو</h2>
+      <div class="people" role="tablist">${result.sheets.map((s) => `<button role="tab" aria-selected="${s === current}" data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)}</button>`).join('')}</div>
       ${current ? personView(current) : '<p class="empty">لا يوجد أعضاء في القائمة — أضفهم من الإعدادات.</p>'}
     </section>`;
 }
@@ -207,16 +252,17 @@ function issuesView(): string {
   const groups = kinds.map((kind) => {
     const list = result.issues.filter((i) => i.kind === kind);
     if (!list.length) return '';
-    return `<details><summary>${ISSUE_TITLES[kind]} <b>${list.length}</b></summary><ul class="issues">${list.map(issueCard).join('')}</ul></details>`;
+    return `<details class="card"><summary>${ISSUE_TITLES[kind]} <span class="badge">${list.length}</span></summary><ul class="issues">${list.map(issueCard).join('')}</ul></details>`;
   }).join('');
   const decided = Object.keys(project.decisions.supervisor ?? {}).length + Object.keys(project.decisions.starts ?? {}).length +
     Object.keys(project.decisions.dismissed ?? {}).length + Object.keys(project.decisions.names ?? {}).length;
   return `
     <section>
-      <p class="lead">هذه الخطوة اختيارية. هذه حالات لم يستطع البرنامج حسمها وحده؛ إن تركتها يبقى اقتراحه كما هو. اضغط على أي مجموعة لفتحها.</p>
-      ${groups || '<p class="good">لا توجد قرارات معلّقة.</p>'}
-      ${decided ? `<button data-act="undo-decisions" class="link">التراجع عن قراراتي (${decided})</button>` : ''}
-      <div class="next"><button data-tab="sheets" class="primary">← العودة إلى الجداول</button></div>
+      <h2>${icon('checks', 20)} قرارات اختيارية</h2>
+      <p class="lead">حالات لم يستطع البرنامج حسمها وحده. إن تركتها يبقى اقتراحه كما هو. اضغط على أي مجموعة لفتحها.</p>
+      ${groups || `<p class="allgood">${icon('check', 20)} لا توجد قرارات معلّقة.</p>`}
+      ${decided ? `<button data-act="undo-decisions" class="link">${icon('undo', 15)} التراجع عن قراراتي (${decided})</button>` : ''}
+      <div class="next"><button data-tab="sheets" class="primary">${icon('back')} العودة إلى الجداول</button></div>
     </section>`;
 }
 
@@ -226,35 +272,36 @@ function settingsView(): string {
     `<option value="">—</option>${DAY_NAMES.map((d, i) => `<option value="${i}" ${value === i ? 'selected' : ''}>${d}</option>`).join('')}`;
   const rows = project.roster.map((st, i) => `
     <tr data-i="${i}">
-      <td><input data-f="name" value="${esc(st.name)}"></td>
-      <td><input data-f="aliases" value="${esc(st.aliases.join('، '))}" title="الأسماء كما تُكتب في الجداول الرئيسية، مفصولة بفاصلة"></td>
-      <td><input data-f="programme" value="${esc(st.programme)}"></td>
-      <td><select data-f="rank">${(Object.keys(RANKS) as Rank[]).map((r) => `<option value="${r}" ${st.rank === r ? 'selected' : ''}>${RANKS[r]}</option>`).join('')}</select></td>
-      <td class="c"><input type="checkbox" data-f="advising" ${st.advising ? 'checked' : ''}></td>
-      <td><select data-f="secondmentDay">${dayOptions(st.secondmentDay)}</select></td>
-      <td><input type="number" min="0" max="10" data-f="qualityHours" value="${st.qualityHours}"></td>
-      <td><input type="number" min="0" max="20" data-f="officeHours" value="${st.officeHours ?? 4}"></td>
-      <td><input type="number" min="0" max="20" data-f="advisingHours" value="${st.advisingHours ?? 4}" ${st.advising ? '' : 'disabled'}></td>
-      <td><button data-act="remove-staff" data-i="${i}" class="danger" title="حذف">✕</button></td>
+      <td><input data-f="name" value="${esc(st.name)}" aria-label="الاسم"></td>
+      <td><input data-f="aliases" value="${esc(st.aliases.join('، '))}" title="الأسماء كما تُكتب في الجداول الرئيسية، مفصولة بفاصلة" aria-label="الأسماء في الجداول"></td>
+      <td><input data-f="programme" value="${esc(st.programme)}" aria-label="البرنامج"></td>
+      <td><select data-f="rank" aria-label="الدرجة">${(Object.keys(RANKS) as Rank[]).map((r) => `<option value="${r}" ${st.rank === r ? 'selected' : ''}>${RANKS[r]}</option>`).join('')}</select></td>
+      <td class="c"><input type="checkbox" data-f="advising" ${st.advising ? 'checked' : ''} aria-label="مرشد"></td>
+      <td><select data-f="secondmentDay" aria-label="يوم الانتداب">${dayOptions(st.secondmentDay)}</select></td>
+      <td><input type="number" min="0" max="10" data-f="qualityHours" value="${st.qualityHours}" aria-label="ساعات الجودة"></td>
+      <td><input type="number" min="0" max="20" data-f="officeHours" value="${st.officeHours ?? 4}" aria-label="الساعات المكتبية"></td>
+      <td><input type="number" min="0" max="20" data-f="advisingHours" value="${st.advisingHours ?? 4}" ${st.advising ? '' : 'disabled'} aria-label="ساعات الإرشاد"></td>
+      <td><button data-act="remove-staff" data-i="${i}" class="iconbtn danger" title="حذف العضو" aria-label="حذف ${esc(st.name)}">${icon('trash', 16)}</button></td>
     </tr>`).join('');
   const detected = result.detected.filter((d) => d.role === 'doctor' || d.count > 2);
   return `
     <section>
+      <h2>${icon('settings', 20)} الإعدادات</h2>
       <p class="lead">لا تحتاج هذه الصفحة في الاستخدام العادي. استخدمها عند تغيّر أعضاء القسم أو بيانات التوقيعات.</p>
-      <details open>
-        <summary>أعضاء القسم (${project.roster.length})</summary>
+      <details class="card" open>
+        <summary>${icon('users')} أعضاء القسم <span class="badge soft">${project.roster.length}</span></summary>
         <p class="hint">فقط من في هذه القائمة يصدر له جدول.</p>
         <div class="scroll"><table class="roster">
           <thead><tr><th>الاسم على الجدول</th><th>الاسم كما يُكتب في الجداول الرئيسية</th><th>البرنامج</th><th>الدرجة</th><th>مرشد</th><th>الانتداب</th><th>جودة</th><th>مكتبية</th><th>ارشاد</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
-        <button data-act="add-staff">+ إضافة عضو</button>
+        <button data-act="add-staff">${icon('plus', 16)} إضافة عضو</button>
         ${detected.length ? `<details><summary class="small">أسماء في الجداول الرئيسية ليست في القائمة (${detected.length})</summary>
           <p class="hint">أضف من هو من القسم فقط؛ الباقون يُتجاهلون.</p>
           <ul class="chips">${detected.map((d) => `<li>${esc(d.name)} <button data-act="add-detected" data-name="${esc(d.name)}" data-role="${d.role}">إضافة</button></li>`).join('')}</ul></details>` : ''}
       </details>
-      <details>
-        <summary>بيانات تظهر في كل جدول (الفصل الدراسي والتوقيعات)</summary>
+      <details class="card">
+        <summary>${icon('edit')} بيانات تظهر في كل جدول (الفصل الدراسي والتوقيعات)</summary>
         <div class="form">
           <label>الفصل الدراسي <input data-s="semester" value="${esc(s.semester)}"></label>
           <label>اسم القسم <input data-s="department" value="${esc(s.department)}"></label>
@@ -313,11 +360,11 @@ function openEditor(cell: string): void {
   const dialog = document.getElementById('editor') as HTMLDialogElement;
   dialog.innerHTML = `
     <form method="dialog">
-      <h3>${DAY_NAMES[day]} — ${SLOT_LABELS[slot]}</h3>
+      <h3>${DAY_NAMES[day]} — <bdi dir="ltr">${item ? range(item.slots) : SLOT_LABELS[slot].replace("-", " – ")}</bdi></h3>
       <div class="types">${types.map((t) => `<label><input type="radio" name="type" value="${t}" ${(item?.type ?? 'empty') === t ? 'checked' : ''}> ${t === 'empty' ? 'فارغة' : TYPES[t]}</label>`).join('')}</div>
       <label>النص في الخانة<textarea name="text" rows="2">${esc(item?.text ?? '')}</textarea></label>
       <label>عدد الفترات <select name="span">${[1, 2, 3, 4].filter((n) => slot + n <= 10).map((n) => `<option ${n === (item ? item.slots.filter((x) => x >= slot).length : 2) ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-      <div class="row"><button value="ok" class="primary">حفظ</button><button value="cancel">إلغاء</button></div>
+      <div class="row end"><button value="ok" class="primary">${icon('check', 16)} حفظ</button><button value="cancel">إلغاء</button></div>
     </form>`;
   const form = dialog.querySelector('form')!;
   const text = form.elements.namedItem('text') as HTMLTextAreaElement;
@@ -420,6 +467,16 @@ root.addEventListener('click', (e) => {
       message = '';
       render();
       return window.scrollTo(0, 0);
+    case 'add-cell': {
+      const sheet = staffSheet(person) ?? result.sheets[0];
+      const day = Number(el.dataset.day);
+      const free = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].find((x) => !sheet?.items.some((it) => it.day === day && it.slots.includes(x)));
+      if (free === undefined) {
+        message = 'لا توجد فترة فارغة في هذا اليوم';
+        return render();
+      }
+      return openEditor(`${day}:${free}`);
+    }
     case 'person':
       person = id;
       tab = 'sheets';
