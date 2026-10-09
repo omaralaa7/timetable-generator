@@ -99,12 +99,22 @@ const PAIRS = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]];
  * Who teaches weeks 1–7 where the master has no underline — answered by the client (2026-10-09).
  * The lasting fix is to underline the name in the master; an underline or a review-screen choice wins over this.
  */
-const CLIENT_STARTS: { code: string; subtitle?: string; first: string }[] = [
+const CLIENT_STARTS: { code: string; title?: string; subtitle?: string; first: string }[] = [
   { code: 'MAT 201', first: 'اسماء عبدالرحيم' },
   { code: 'ELP 3E1', subtitle: 'نظم القياسات', first: 'سيد محمد احمد' },
   // Preparatory level, as on the hand-made sheets (the master has no underline there).
   { code: 'MAT 001', first: 'جمعة فهمى' },
   { code: 'HUM 002', first: 'اسماء عبدالرحيم' },
+  // Mechanics, as on the hand-made sheets. ELP 331 is a different course in the power programme.
+  { code: 'ELP 331', title: 'الات القوى الكهربية', first: 'احمد السيد' },
+];
+
+/**
+ * A doctor who teaches a lecture but is not written in the master (brief §9): the mechanics
+ * timetable lists only Dr. Mai Helmy for this course; Dr. Asmaa Radi teaches weeks 1–7.
+ */
+const CLIENT_COTEACHERS: { title: string; name: string; starts: boolean }[] = [
+  { title: 'دوائر كهربية والكترونية', name: 'اسماء راضى', starts: true },
 ];
 
 const key = (s: string) => normalize(s).replace(/[^\p{L}\p{N}]/gu, '');
@@ -177,6 +187,15 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
 
   // ── Names: review-screen mappings, then one-word names from the course's lecture ──
   const lectures = sessions.filter((s) => s.parsed.type === 'lecture');
+  for (const s of lectures) {
+    for (const extra of CLIENT_COTEACHERS.filter((c) => key(c.title) === key(s.parsed.title))) {
+      const doctors = s.parsed.names.filter((t) => t.role === 'doctor');
+      const staff = roster.find((r) => r.aliases.some((a) => nameKey(a) === nameKey(extra.name)));
+      if (!staff || doctors.length !== 1 || doctors[0].staffId === staff.id) continue;
+      if (extra.starts) doctors[0].underline = 0;
+      s.parsed.names.push({ name: extra.name, prefix: 'د', role: 'doctor', rank: 'lecturer', underline: extra.starts ? 1 : 0, staffId: staff.id });
+    }
+  }
   const detected = new Map<string, { name: string; role: NameToken['role']; count: number }>();
   for (const s of sessions) {
     for (const t of s.parsed.names) {
@@ -219,11 +238,12 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   };
 
   // ── Lectures (§5.1, §5.2). A level-1 lecture shared by two programmes is one lecture. ──
-  // Same time, same room, a doctor in common → the same lecture; the fuller cell is kept.
+  // Same time, a doctor in common and the same room or course → the same lecture; the fuller cell is kept.
   const doctorKeys = (s: Session) => s.parsed.names.filter((t) => t.role === 'doctor').map((t) => nameKey(t.name));
   const sameLecture = (a: Session, b: Session) =>
-    a.day === b.day && a.slots.join() === b.slots.join() && key(a.parsed.room) === key(b.parsed.room) &&
-    doctorKeys(a).some((k) => doctorKeys(b).includes(k));
+    a.day === b.day && a.slots.join() === b.slots.join() && doctorKeys(a).some((k) => doctorKeys(b).includes(k)) &&
+    // the same room, or the same course with the room written differently (`مدرج 7` / `مدرج كهرباء`)
+    (key(a.parsed.room) === key(b.parsed.room) || courseKey(a.parsed) === courseKey(b.parsed));
   const unique: Session[] = [];
   for (const s of [...lectures].sort((a, b) => doctorKeys(b).length - doctorKeys(a).length)) {
     if (!unique.some((u) => sameLecture(u, s))) unique.push(s);
@@ -251,7 +271,8 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       else if (marked.length === 1) first = idOf(marked[0]);
       else if (doctors.some((t) => idOf(t) === startOf.get(ck))) first = startOf.get(ck)!;
       else {
-        const told = CLIENT_STARTS.find((c) => c.code === p.code && (!c.subtitle || key(c.subtitle) === key(p.subtitle)));
+        const told = CLIENT_STARTS.find((c) => c.code === p.code && (!c.subtitle || key(c.subtitle) === key(p.subtitle)) &&
+          (!c.title || key(c.title) === key(p.title)));
         const starter = told && doctors.find((t) => nameKey(t.name) === nameKey(told.first));
         if (starter) first = idOf(starter);
         // Last resort: what an earlier, underlined copy of the masters said for this course.

@@ -71,6 +71,11 @@ export async function readXlsx(data: ArrayBuffer | Uint8Array, sheetName?: strin
       const runs = cellRuns(cell);
       if (!runs.length) return;
       const span = merges.get(cell.address) ?? { rowSpan: 1, colSpan: 1 };
+      // Hidden columns/rows hold leftovers the author no longer sees (the mechanics workbook
+      // keeps another programme's cells in hidden columns) — read only what is visible.
+      const visibleCol = Array.from({ length: span.colSpan }, (_, i) => c + i).some((x) => !ws.getColumn(x).hidden);
+      const visibleRow = Array.from({ length: span.rowSpan }, (_, i) => r + i).some((x) => !ws.getRow(x).hidden);
+      if (!visibleCol || !visibleRow) return;
       cells.push({ row: r - 1, col: c - 1, ...span, runs });
       colCount = Math.max(colCount, c - 1 + span.colSpan);
     });

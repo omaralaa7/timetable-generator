@@ -100,9 +100,20 @@ export function extractSessions(table: RawTable, programme: string, tableIndex =
   const rowSlot: (number | null)[] = [];
   let day: number | null = null;
   let slot: number | null = null;
+  // Rows under the timetable (signatures, notes) start with other text in the day column.
+  const outside: boolean[] = [];
+  let below = false;
   for (let r = firstBodyRow; r < table.rowCount; r++) {
     const dayCell = origin[r][dayCol];
     const d = dayCell ? parseDay(cellText(dayCell)) : null;
+    if (d !== null) below = false;
+    else if (dayCell && /\p{L}/u.test(cellText(dayCell))) below = true;
+    outside[r] = below;
+    if (below) {
+      rowDay[r] = null;
+      rowSlot[r] = null;
+      continue;
+    }
     if (d !== null && d !== day) {
       day = d;
       slot = null;
@@ -125,7 +136,7 @@ export function extractSessions(table: RawTable, programme: string, tableIndex =
 
   const sessions: Session[] = [];
   for (const cell of table.cells) {
-    if (cell.row < firstBodyRow || !isData(cell.col)) continue;
+    if (cell.row < firstBodyRow || !isData(cell.col) || outside[cell.row]) continue;
     const text = tidy(cellText(cell));
     if (parseDay(text) !== null) continue; // a second day column
     if (!/\p{L}/u.test(text)) continue; // empty or `-------`
