@@ -132,7 +132,8 @@ test('roster: similar names stay apart, one-word names are not guessed', () => {
   assert.deepEqual([...ids('أسماء عبدالرحيم')], ['asmaa-abdelrahim']);
   assert.deepEqual([...ids('أحمد سالم')], ['ahmed-salem']);
   assert.deepEqual([...ids('أحمد السيد')], ['ahmed-elsayed']);
-  assert.deepEqual([...ids('جمعة عثمان')], [null]);
+  // جمعة عثمان is the same person as جمعه فهمى (full name جمعة فهمي عثمان)
+  assert.deepEqual([...ids('جمعة عثمان')], ['gomaa-fahmy']);
   assert.deepEqual([...ids('مايسة')], [null]);
   assert.equal(of('tamer-elsharkawy', 'section', power).length > 10, true);
 });

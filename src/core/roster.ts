@@ -47,7 +47,7 @@ const BASE: Staff[] = [
   { id: 'ahmed-elsayed', name: 'د/أحمد السيد متولي', aliases: ['احمد السيد', 'اخمد السيد', 'احمد السيد متولى'], programme: 'هندسة القوي الكهربية', rank: 'lecturer', advising: true, secondmentDay: 4, qualityHours: 2 },
   { id: 'asmaa-abdelrahim', name: 'د/ أسماء عبدالرحيم إبراهيم السقعان', aliases: ['اسماء عبدالرحيم', 'اسماء عبد الرحيم السقعان'], programme: POWER, rank: 'lecturer', advising: true, secondmentDay: 4, qualityHours: 2 },
   { id: 'mahmoud-elsadd', name: 'ا.د/محمود عبدآمين السد', aliases: ['محمود السد', 'محمود عبدامين السد'], programme: POWER, rank: 'professor', advising: false, secondmentDay: 2, qualityHours: 2 },
-  { id: 'gomaa-fahmy', name: 'ا.م.د/جمعه فهمى عبدالنبى', aliases: ['جمعه فهمى', 'جمعة فهمى', 'جمعه فهمى عبدالنبى'], programme: POWER, rank: 'associate', advising: false, secondmentDay: null, qualityHours: 2 },
+  { id: 'gomaa-fahmy', name: 'ا.م.د/جمعه فهمى عبدالنبى', aliases: ['جمعه فهمى', 'جمعة عثمان', 'جمعة فهمى عثمان', 'جمعة فهمى', 'جمعه فهمى عبدالنبى'], programme: POWER, rank: 'associate', advising: false, secondmentDay: null, qualityHours: 2 },
   { id: 'eman-awad', name: 'د/ايمان احمد عوض', aliases: ['ايمان عوض', 'ايمان احمد عوض'], programme: POWER, rank: 'lecturer', advising: true, secondmentDay: 5, qualityHours: 2 },
   { id: 'tamer-elsharkawy', name: 'م/تامر الشرقاوى', aliases: ['تامر الشرقاوى', 'تامر'], programme: POWER, rank: 'ta', advising: true, secondmentDay: null, qualityHours: 2 },
 ];

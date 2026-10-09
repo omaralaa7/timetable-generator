@@ -107,6 +107,7 @@ const CLIENT_STARTS: { code: string; title?: string; subtitle?: string; first: s
   { code: 'HUM 002', first: 'اسماء عبدالرحيم' },
   // Mechanics, as on the hand-made sheets. ELP 331 is a different course in the power programme.
   { code: 'ELP 331', title: 'الات القوى الكهربية', first: 'احمد السيد' },
+  { code: 'ELP 4E2', title: 'اختيارى 4 الالات الخاصة', first: 'عبد الوهاب العيسوى' },
 ];
 
 /**
