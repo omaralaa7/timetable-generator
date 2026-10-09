@@ -194,3 +194,11 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - Everyone must reach the minimum load; the tool tops up with office hours and advising.
 - Commits carry the owner's name only (no co-author lines).
 - Both-free order (revised 2026-10-09, supersedes the line above): 1) leave preset duty time alone, 2) prefer the doctor who already comes in that day, 3) same doctor stays with the same section, 4) split the course's sessions evenly, 5) the doctor who does not hold the other section, 6) lower total load. With this, Asmaa Radi, Mai Helmy and Ahmed Salem match their sheets' supervision fully.
+
+## 14. Client answers by voice note (Dr. Asmaa Radi, 2026-10-09) — these supersede §13 where they differ
+- **Order she works in by hand:** 1) lectures, 2) supervision of sections/labs, 3) academic advising, 4) office hours. Office hours and advising are *not* reserved first; they go into whatever is free afterwards. Advising goes on days the doctor is in the faculty; office hours may go on any other day (e.g. Wednesday or Thursday), never on the secondment day.
+- **Supervision when both doctors are free:** two doctors with two labs → each takes one; share evenly; prefer the doctor who is in the faculty that day (has lectures that day). Implemented order: in the faculty that day → same doctor stays with the same section → even split → not holding the other section → lower load. Duty presets no longer block a slot for supervision; they only tell which days a person attends.
+- **`النصاب` row:** the comms sheets are the correct ones. The power sheets (Mahmoud, Asmaa Abdelrahim, Eman, Gomaa) were made by Eng. Tamer and their النصاب numbers are not accurate — do not reproduce them.
+- **Masters win over the old individual sheets** (rooms, the civil MAT 101 lecture — which the old sheet had missed).
+- **Who starts:** طرق عددية (MAT 201) → د. أسماء عبدالرحيم; اختيارى 1 نظم القياسات (ELP 3E1) → she *believes* د. سيد محمد أحمد (not certain). Coded as `CLIENT_STARTS` in `src/core/rules.ts`; an underline in the master or a review choice overrides it.
+- **Errors in the power master she will fix herself:** the orphan `/ Lab 825` cell (Sunday, level 1, section 2) and م. تامر listed in two labs at once.

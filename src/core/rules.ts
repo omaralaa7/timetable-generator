@@ -94,6 +94,15 @@ export const MINIMUM: Record<Rank, number> = { professor: 25, associate: 27, lec
 const DUTY_TEXT = { office: 'ساعات مكتبية', advising: 'ارشاد أكاديمي', quality: 'جودة' } as const;
 const PAIRS = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]];
 
+/**
+ * Who teaches weeks 1–7 where the master has no underline — answered by the client (2026-10-09).
+ * The lasting fix is to underline the name in the master; an underline or a review-screen choice wins over this.
+ */
+const CLIENT_STARTS: { code: string; subtitle?: string; first: string }[] = [
+  { code: 'MAT 201', first: 'اسماء عبدالرحيم' },
+  { code: 'ELP 3E1', subtitle: 'نظم القياسات', first: 'سيد محمد احمد' },
+];
+
 const key = (s: string) => normalize(s).replace(/[^\p{L}\p{N}]/gu, '');
 const isElectiveKind = (p: ParsedText) => /اختياري/.test(normalize(p.kind));
 
@@ -226,7 +235,12 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       if (chosen && doctors.some((t) => idOf(t) === chosen)) first = chosen;
       else if (marked.length === 1) first = idOf(marked[0]);
       else if (doctors.some((t) => idOf(t) === startOf.get(ck))) first = startOf.get(ck)!;
-      else if (!issues.some((i) => i.id === `start:${ck}`)) {
+      else {
+        const told = CLIENT_STARTS.find((c) => c.code === p.code && (!c.subtitle || key(c.subtitle) === key(p.subtitle)));
+        const starter = told && doctors.find((t) => nameKey(t.name) === nameKey(told.first));
+        if (starter) first = idOf(starter);
+      }
+      if (!first && !issues.some((i) => i.id === `start:${ck}`)) {
         issues.push({
           id: `start:${ck}`, kind: 'no-underline', staffIds: mine, courseKey: ck, options: doctors.map(idOf),
           labels: Object.fromEntries(doctors.map((t) => [idOf(t), `${t.prefix} ${t.name}`.trim()])),
@@ -305,23 +319,22 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     const siblings = sections.filter((x) => supervisor.has(x.id) && sectionOf(x) === sectionOf(open));
     const sameSection = siblings.find((x) => x.sections.join() === open.sections.join() && free.includes(supervisor.get(x.id)!));
     const otherSection = siblings.find((x) => x.sections.join() !== open.sections.join());
-    // Narrow the choice step by step; the first rule that separates the two doctors decides.
+    // Narrow the choice step by step, the way the committee does it by hand (client, 2026-10-09):
+    // lectures are placed first, then supervision; office hours and advising come last and never decide this.
     const courseHours = (id: string) => sections
       .filter((x) => supervisor.get(x.id) === id && key(x.parsed.title) === key(open.parsed.title))
       .reduce((n, x) => n + x.slots.length, 0);
-    const hasDuty = (id: string) => (byId.get(id)!.presets ?? []).some((p) => !decisions.duties?.[id] && overlaps(p, open));
-    const comesIn = (id: string) => items.get(id)!.some((it) => it.day === open.day) ||
+    // In the faculty that day: something already placed, or a day this person is known to attend.
+    const present = (id: string) => items.get(id)!.some((it) => it.day === open.day) ||
       (byId.get(id)!.presets ?? []).some((p) => p.day === open.day);
     let pool = free;
     const prefer = (test: (id: string) => boolean) => {
       const kept = pool.filter(test);
       if (kept.length) pool = kept;
     };
-    prefer((id) => !hasDuty(id)); // leave fixed office / advising / quality time alone
-    prefer(comesIn); // do not bring someone in on a day they have nothing else
+    prefer(present); // the doctor who is already in the faculty that day
     if (sameSection) prefer((id) => id === supervisor.get(sameSection.id)); // same doctor stays with the same section
-    const fewest = Math.min(...pool.map(courseHours));
-    prefer((id) => courseHours(id) === fewest); // the two doctors share a course's sessions evenly
+    prefer((id) => courseHours(id) === Math.min(...pool.map(courseHours))); // the two doctors share a course's sessions evenly
     if (otherSection) prefer((id) => id !== supervisor.get(otherSection.id));
     const pick = [...pool].sort((x, y) => load(x) - load(y))[0];
     assign(open, pick);
@@ -427,8 +440,8 @@ function suggestDuties(staff: Staff, items: GridItem[]): void {
     }
   }
   // … then whatever is still missing.
-  add('office', Math.max(0, (staff.officeHours ?? 4) - hours('office')));
   if (canAdvise) add('advising', Math.max(0, (staff.advisingHours ?? 4) - hours('advising')));
+  add('office', Math.max(0, (staff.officeHours ?? 4) - hours('office')));
   // Top up to the minimum, alternating office hours and advising.
   let turn: 'office' | 'advising' = 'office';
   while (counted() < MINIMUM[staff.rank]) {
