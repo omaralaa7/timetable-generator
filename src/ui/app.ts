@@ -92,7 +92,7 @@ function filesView(): string {
     <section>
       <p class="lead">الخطوة ١: ضع ملفات الجداول الرئيسية لكل البرامج (اتصالات، قوى، مدني…).</p>
       <label class="drop" id="drop">
-        <input type="file" multiple accept=".docx,.xlsx,.pdf" data-act="upload" hidden>
+        <input type="file" multiple accept=".docx,.doc,.xlsx,.pdf" data-act="upload" hidden>
         <b>اسحب الملفات إلى هنا أو اضغط للاختيار</b>
         <span>ملفات Word أو Excel — الملفات لا تغادر جهازك</span>
       </label>

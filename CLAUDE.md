@@ -207,3 +207,10 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - **Clarification (voice note, 2026-10-09 11:28):** "splitting the labs" means section 1 of a course goes to one doctor and section 2 to the other — a single section is never split. If one section cannot be supervised by either (it clashes with their lectures) and only the other is open to both, it goes to **whoever still needs hours to complete their minimum load** (example: Dr. Hend, minimum 27, gets it if Dr. Asmaa Radi has already passed 29). Implemented as the last tie-break (`load`, counting the person's usual office and advising hours).
 - نظم القياسات: Dr. Asmaa Abdelrahim's own sheet lists her weeks as 9–15, so Dr. Sayed starts — matches `CLIENT_STARTS`.
 - Mechanics and preparatory masters: she will send the Word/Excel files as soon as she receives them.
+
+## 15. Preparatory master received (2026-10-09)
+- `samples/masters/preparatory_2026-27.docx` — converted with Word from the client's `.doc` (the site refuses `.doc` with instructions to re-save as `.docx`). The timetable sits inside a text box; one table, sections 1–10 in two groups, no level row (level = null).
+- Conventions there: `ت <course>` = تمرين, `م <course>` = معمل (`م برمجة` is the lab of `حاسبات وبرمجة`), `أنشطة وندوات` is ignored, section cells use first names only (`د. محمود & د. جمعة`, `د. ايمان & د. اسماء`) — resolved from the course's lecture.
+- Each lecture is given twice (once per group). MAT 001 and HUM 002 have no underline; who starts is taken from the hand-made sheets (`CLIENT_STARTS`): جمعه فهمى and أسماء عبدالرحيم.
+- Remembered (preset) lectures are dropped automatically once a master provides the same course.
+- Open: Dr. Gomaa's MAT 001 lecture for group 1 (Sunday 10:45) clashes with his ELP 441 lecture in power.

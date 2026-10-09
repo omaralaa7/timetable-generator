@@ -101,6 +101,9 @@ const PAIRS = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]];
 const CLIENT_STARTS: { code: string; subtitle?: string; first: string }[] = [
   { code: 'MAT 201', first: 'اسماء عبدالرحيم' },
   { code: 'ELP 3E1', subtitle: 'نظم القياسات', first: 'سيد محمد احمد' },
+  // Preparatory level, as on the hand-made sheets (the master has no underline there).
+  { code: 'MAT 001', first: 'جمعة فهمى' },
+  { code: 'HUM 002', first: 'اسماء عبدالرحيم' },
 ];
 
 const key = (s: string) => normalize(s).replace(/[^\p{L}\p{N}]/gu, '');
@@ -175,7 +178,9 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       if (oneWord && t.role === 'doctor') {
         const pool = lectures
           .filter((l) => l.programme === s.programme && (key(l.parsed.title) === key(s.parsed.title) ||
-            (l.parsed.subtitle && key(s.parsed.title).includes(key(l.parsed.subtitle)))))
+            (l.parsed.subtitle && key(s.parsed.title).includes(key(l.parsed.subtitle))) ||
+            // `م برمجة` is the lab of `حاسبات وبرمجة`
+            (key(s.parsed.title).length >= 4 && key(l.parsed.title).includes(key(s.parsed.title)))))
           .flatMap((l) => l.parsed.names)
           .filter((n) => n.role === 'doctor' && normalize(n.name).split(' ')[0] === normalize(t.name));
         const ids = [...new Set(pool.map((n) => n.staffId ?? `?${nameKey(n.name)}`))];
@@ -266,6 +271,9 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   for (const staff of roster) {
     for (const p of staff.presets ?? []) {
       if (p.type !== 'lecture' && p.type !== 'supervision' && p.type !== 'section') continue;
+      // The master of that programme has been uploaded since: it wins and the remembered copy is dropped.
+      const name = p.course ? key(p.course.name.replace(/\(.*$/, '')) : '';
+      if (name && [...courses.get(staff.id)!.values()].some((c) => !c.key.startsWith('external|') && key(c.name).includes(name))) continue;
       if (p.course && !courses.get(staff.id)!.has(p.course.key)) courses.get(staff.id)!.set(p.course.key, { ...p.course, order: order++ });
       // Once the user has edited this person's grid, their blocks live in `decisions.duties`.
       if (decisions.duties?.[staff.id] || !fits(staff.id, p)) continue;
@@ -366,6 +374,15 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     else suggestDuties(staff, mine);
     applyEdits(mine, decisions.edits?.[staff.id]);
     mine.sort((a, b) => a.day - b.day || a.slots[0] - b.slots[0]);
+    // The same lecture given to two groups back to back is one block on the sheet.
+    for (let i = mine.length - 1; i > 0; i--) {
+      const prev = mine[i - 1];
+      const it = mine[i];
+      if (prev.day === it.day && prev.type === it.type && prev.text === it.text && prev.slots[prev.slots.length - 1] + 1 === it.slots[0]) {
+        prev.slots = [...prev.slots, ...it.slots];
+        mine.splice(i, 1);
+      }
+    }
     const hours = (type: ItemType) => mine.filter((it) => it.type === type).reduce((n, it) => n + it.slots.length, 0);
     const isTa = staff.rank === 'ta';
     const totals: Totals = {

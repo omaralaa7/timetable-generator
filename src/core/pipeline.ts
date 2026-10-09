@@ -28,6 +28,7 @@ export async function readMaster(file: MasterFile): Promise<ReadMaster> {
     const { table, sheets, sheet } = await readXlsx(file.data, file.sheet);
     return { ...parseMaster([table], file.programme), sheets, sheet };
   }
+  if (ext === 'doc') throw new Error(`«${file.name}»: هذا ملف Word بالصيغة القديمة (‎.doc). افتحه في Word ثم: ملف ← حفظ باسم ← اختر النوع «Word Document (‎.docx)» وارفع الملف الجديد`);
   if (ext === 'pdf') throw new Error(`«${file.name}»: ملفات PDF غير مدعومة — برجاء رفع ملف Word أو Excel الأصلي`);
   throw new Error(`«${file.name}»: صيغة غير مدعومة — المطلوب ‎.docx أو ‎.xlsx`);
 }

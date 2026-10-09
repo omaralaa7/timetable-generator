@@ -12,7 +12,8 @@ const TITLE_PREFIXES: [RegExp, NameToken['role'], Rank][] = [
   [new RegExp(`^م${SEP}`), 'ta', 'ta'],
 ];
 
-const KIND = /^(محاضره|مقرر اختياري|ت\s*\.?\s*عملي|عملي|معمل|تمرين|م برمجه|ورش)\s*/;
+// The preparatory timetable abbreviates: `ت رياضيات 1` = تمرين, `م فيزياء 1` / `م برمجة` = معمل.
+const KIND = /^(محاضره|مقرر اختياري|ت\s*\.?\s*عملي|عملي|معمل|تمرين|ورش|ت(?=\s)|م(?=\s))\s*/;
 // The civil master writes the kind after the title: `رياضيات 3(تمرين)`.
 const BRACKET_KIND = /^(تمرين|معمل|عملي)$/;
 const CODE = /^([A-Z]{3})\s*([0-9A-Z]{1,4})$/;
@@ -23,11 +24,11 @@ const OPEN = /[(\[]/;
 const CLOSE = /[)\]]/;
 
 function detectType(n: string): SessionType {
-  if (/انشطه طلابيه/.test(n)) return 'ignore';
+  if (/انشطه (طلابيه|وندوات)/.test(n)) return 'ignore';
   if (/مشروع التخرج/.test(n)) return 'project';
   // Power writes its electives without the word `محاضرة`: `اختيارى 1 (ميكاترونكس) [ELP3E1]…`
   if (/محاضره|مقرر اختياري|^اختياري/.test(n)) return 'lecture';
-  if (/عملي|معمل|تمرين|م برمجه|ورش/.test(n)) return 'section';
+  if (/عملي|معمل|تمرين|ورش|^[تم]\s/.test(n)) return 'section';
   return 'unknown';
 }
 
