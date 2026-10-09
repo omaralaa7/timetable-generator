@@ -204,3 +204,6 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - **Errors in the power master she will fix herself:** the orphan `/ Lab 825` cell (Sunday, level 1, section 2) and م. تامر listed in two labs at once.
 - **No listed doctor free for a lab** (same voice notes): a doctor takes a lab only when free and in the faculty that day, so such a session gets no department supervisor. It is not a review item — the tool no longer lists these.
 - **نظم القياسات start:** she said to confirm it with د. أسماء عبدالرحيم.
+- **Clarification (voice note, 2026-10-09 11:28):** "splitting the labs" means section 1 of a course goes to one doctor and section 2 to the other — a single section is never split. If one section cannot be supervised by either (it clashes with their lectures) and only the other is open to both, it goes to **whoever still needs hours to complete their minimum load** (example: Dr. Hend, minimum 27, gets it if Dr. Asmaa Radi has already passed 29). Implemented as the last tie-break (`load`, counting the person's usual office and advising hours).
+- نظم القياسات: Dr. Asmaa Abdelrahim's own sheet lists her weeks as 9–15, so Dr. Sayed starts — matches `CLIENT_STARTS`.
+- Mechanics and preparatory masters: she will send the Word/Excel files as soon as she receives them.

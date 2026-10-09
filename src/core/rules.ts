@@ -296,7 +296,12 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     const text = sectionText(s.parsed, true);
     items.get(id)!.push({ day: s.day, slots: s.slots, type: 'supervision', text, sessionId: s.id, origin: 'master' });
   };
-  const load = (id: string) => items.get(id)!.reduce((n, it) => n + it.slots.length, 0) - MINIMUM[byId.get(id)!.rank];
+  // How far a person is from their minimum once their usual office hours and advising are added (negative = still short).
+  const load = (id: string) => {
+    const staff = byId.get(id)!;
+    const duties = (staff.officeHours ?? 4) + (staff.advising ? (staff.advisingHours ?? 4) : 0);
+    return items.get(id)!.reduce((n, it) => n + it.slots.length, 0) + duties - MINIMUM[staff.rank];
+  };
   let pending = sections.filter((s) => rosterDoctors(s).length > 0);
   for (const s of pending) {
     const chosen = decisions.supervisor?.[s.id];
@@ -333,9 +338,11 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       if (kept.length) pool = kept;
     };
     prefer(present); // the doctor who is already in the faculty that day
-    if (sameSection) prefer((id) => id === supervisor.get(sameSection.id)); // same doctor stays with the same section
+    // Section 1 goes to one doctor and section 2 to the other; a single section is never split between them.
+    if (sameSection) prefer((id) => id === supervisor.get(sameSection.id));
     prefer((id) => courseHours(id) === Math.min(...pool.map(courseHours))); // the two doctors share a course's sessions evenly
     if (otherSection) prefer((id) => id !== supervisor.get(otherSection.id));
+    // Otherwise it goes to whoever still needs the hours to complete their minimum load.
     const pick = [...pool].sort((x, y) => load(x) - load(y))[0];
     assign(open, pick);
     issues.push({
