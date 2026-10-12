@@ -30,7 +30,7 @@ const KEY = 'individual-timetables-project-v1';
  * older version then gets the new staff list and asks for the masters again, so nobody keeps working
  * on stale data. The user's own decisions and any staff they added are kept.
  */
-export const DATA_VERSION = 3;
+export const DATA_VERSION = 4;
 /** True when the saved project came from an older version and was refreshed on load. */
 export let refreshed = false;
 
