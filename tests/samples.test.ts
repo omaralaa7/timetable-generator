@@ -49,3 +49,10 @@ test('lecture slots of every sheet are generated (a few moved in the newer maste
     assert.ok(l.same / l.expected >= 0.85, `${id}: ${l.same}/${l.expected}`);
   }
 });
+
+test('with all five masters everyone reaches their minimum load', () => {
+  for (const s of result.sheets) {
+    assert.ok(s.totals.counted >= s.totals.minimum, `${s.staff.name}: ${s.totals.counted}/${s.totals.minimum}`);
+  }
+  assert.equal(result.sheets.find((s) => s.staff.id === 'asmaa-abdelrahim')!.totals.advising, 4);
+});
