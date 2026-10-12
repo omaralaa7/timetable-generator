@@ -16,7 +16,7 @@ const RANK_LABEL: Record<Rank, string> = {
 };
 const FILL: Record<ItemType, string> = {
   lecture: 'FF92D050', supervision: 'FFFFFF00', section: 'FFFFFF00',
-  office: 'FF99FFCC', advising: 'FF99FFCC', quality: 'FF99FFCC',
+  office: 'FF99FFCC', advising: 'FF99FFCC', quality: 'FF99FFCC', activity: 'FFD9D9D9',
 };
 const GREY = 'FFF2F2F2';
 const HEADER = 'FFE4DFEC';
@@ -120,7 +120,7 @@ export async function writeSheet(sheet: StaffSheet, settings: Settings = DEFAULT
       for (const run of runs(item.slots.filter((s) => !taken.has(s)))) {
         run.forEach((s) => taken.add(s));
         const range = `${col(2 + run[0])}${r}:${col(2 + run[run.length - 1])}${r}`;
-        const duty = item.type === 'office' || item.type === 'advising' || item.type === 'quality';
+        const duty = item.type === 'office' || item.type === 'advising' || item.type === 'quality' || item.type === 'activity';
         put(range, item.text, { size: duty ? 28 : 24, fill: FILL[item.type], border: 'medium', wrap: true });
       }
     }

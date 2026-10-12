@@ -16,7 +16,7 @@ const DAY_NAMES = ['السبت', 'الأحد', 'الإثنين', 'الثلاثا
 const RANKS: Record<Rank, string> = { professor: 'أستاذ دكتور', associate: 'أستاذ مساعد', lecturer: 'مدرس', ta: 'مدرس مساعد / معيد' };
 const TYPES: Record<ItemType, string> = {
   lecture: 'محاضرة', supervision: 'إشراف', section: 'تمرين / عملي',
-  office: 'ساعات مكتبية', advising: 'ارشاد أكاديمي', quality: 'جودة',
+  office: 'ساعات مكتبية', advising: 'ارشاد أكاديمي', quality: 'جودة', activity: 'أنشطة',
 };
 const DUTY_TEXT: Partial<Record<ItemType, string>> = { office: 'ساعات مكتبية', advising: 'ارشاد أكاديمي', quality: 'جودة' };
 const ISSUE_TITLES: Record<Issue['kind'], string> = {
@@ -219,7 +219,7 @@ function personView(sheet: StaffSheet): string {
       </div>
       ${gridTable(sheet)}
       ${dayList(sheet)}
-      <p class="legend"><span class="key t-lecture">محاضرة</span><span class="key t-supervision">إشراف</span><span class="key t-office">مكتبية / ارشاد / جودة</span><span class="hint">${icon('edit', 14)} للتعديل اضغط على أي خانة</span></p>
+      <p class="legend"><span class="key t-lecture">محاضرة</span><span class="key t-supervision">إشراف</span><span class="key t-office">مكتبية / ارشاد / جودة</span><span class="key t-activity">أنشطة</span><span class="hint">${icon('edit', 14)} للتعديل اضغط على أي خانة</span></p>
       <details>
         <summary>المقررات المشارك فيها (${sheet.courses.length})</summary>
         <div class="scroll"><table class="courses">

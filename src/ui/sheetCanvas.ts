@@ -18,6 +18,7 @@ const TIME_LABELS = [
 const RANK_LABEL: Record<Rank, string> = { professor: 'أستاذ دكتور', associate: 'أستاذ مساعد', lecturer: 'مدرس', ta: 'مدرس مساعد' };
 const FILL: Record<ItemType, string> = {
   lecture: '#92D050', supervision: '#FFFF00', section: '#FFFF00', office: '#99FFCC', advising: '#99FFCC', quality: '#99FFCC',
+  activity: '#D9D9D9',
 };
 const FONT = '"Segoe UI", Tahoma, "Noto Sans Arabic", "Geeza Pro", Arial, sans-serif';
 

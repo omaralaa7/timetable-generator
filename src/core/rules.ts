@@ -3,7 +3,7 @@ import type { Preset, Staff } from './roster.ts';
 import { SEED_STARTS } from './seedStarts.ts';
 import type { NameToken, ParsedText, Rank, Session } from './types.ts';
 
-export type ItemType = 'lecture' | 'supervision' | 'section' | 'office' | 'advising' | 'quality';
+export type ItemType = 'lecture' | 'supervision' | 'section' | 'office' | 'advising' | 'quality' | 'activity';
 
 /** One block in a person's weekly grid. */
 export interface GridItem {
@@ -93,6 +93,11 @@ export interface Result {
 
 export const MINIMUM: Record<Rank, number> = { professor: 25, associate: 27, lecturer: 29, ta: 33 };
 const DUTY_TEXT = { office: 'ساعات مكتبية', advising: 'ارشاد أكاديمي', quality: 'جودة' } as const;
+/**
+ * The activities period (client, 2026-10-13): Tuesday, third period (12:30–02:10), on every timetable.
+ * Nothing is scheduled there by the tool; the cell reads `أنشطة` and counts in no total.
+ */
+export const ACTIVITY = { day: 3, slots: [4, 5], text: 'أنشطة' } as const;
 const PAIRS = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]];
 /** Saturday: no students in the faculty, so no office hours, advising or quality are placed there (client, 2026-10-12). */
 const NO_STUDENTS_DAY = 0;
@@ -418,6 +423,9 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     const manual = decisions.duties?.[staff.id];
     if (manual) mine.push(...manual.map((d) => ({ ...d, origin: 'manual' as const })));
     else suggestDuties(staff, mine);
+    // Whatever the masters leave free in the activities period is shown as activities.
+    const open = ACTIVITY.slots.filter((x) => staff.secondmentDay !== ACTIVITY.day && !mine.some((it) => it.day === ACTIVITY.day && it.slots.includes(x)));
+    if (open.length) mine.push({ day: ACTIVITY.day, slots: open, type: 'activity', text: ACTIVITY.text, origin: 'auto' });
     applyEdits(mine, decisions.edits?.[staff.id]);
     mine.sort((a, b) => a.day - b.day || a.slots[0] - b.slots[0]);
     // The same lecture given to two groups back to back is one block on the sheet.
@@ -447,7 +455,7 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
         message: `${staff.name}: النصاب ${totals.counted} من ${totals.minimum}`,
       });
     }
-    const daily = [0, 1, 2, 3, 4, 5].map((d) => new Set(mine.filter((it) => it.day === d).flatMap((it) => it.slots)).size);
+    const daily = [0, 1, 2, 3, 4, 5].map((d) => new Set(mine.filter((it) => it.day === d && it.type !== 'activity').flatMap((it) => it.slots)).size);
     const rows = decisions.courses?.[staff.id] ??
       [...courses.get(staff.id)!.values()].sort((a, b) => a.order - b.order).map(({ key, name, share, weeks }) => ({ key, name, share, weeks }));
     return { staff, courses: rows, items: mine, daily, totals };
@@ -464,7 +472,8 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
  * secondment day, nothing on Saturday, Thursday only when nothing else is left.
  */
 function suggestDuties(staff: Staff, items: GridItem[]): void {
-  const taken = (day: number, slot: number) => items.some((it) => it.day === day && it.slots.includes(slot));
+  const taken = (day: number, slot: number) => (day === ACTIVITY.day && (ACTIVITY.slots as readonly number[]).includes(slot)) ||
+    items.some((it) => it.day === day && it.slots.includes(slot));
   const dayLoad = (day: number) => items.filter((it) => it.day === day).reduce((n, it) => n + it.slots.length, 0);
   const add = (type: 'office' | 'advising' | 'quality', want: number): number => {
     let left = want;

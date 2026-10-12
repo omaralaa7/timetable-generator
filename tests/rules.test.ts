@@ -118,3 +118,13 @@ test('duties follow the client notes: fixed office hours, none on Saturday, TA w
   const tamer = sheet('tamer-elsharkawy').totals;
   assert.deepEqual([tamer.office, tamer.quality], [0, 0]);
 });
+
+test('Tuesday third period (12:30–02:10) is kept for activities on every sheet', () => {
+  for (const s of result.sheets) {
+    const there = s.items.filter((it) => it.day === 3 && it.slots.some((x) => x === 4 || x === 5));
+    assert.deepEqual(there.map((it) => `${it.type}:${it.slots.join(',')}`), ['activity:4,5'], s.staff.name);
+    // not counted: the day's total only has the other blocks
+    const others = new Set(s.items.filter((it) => it.day === 3 && it.type !== 'activity').flatMap((it) => it.slots)).size;
+    assert.equal(s.daily[3], others, s.staff.name);
+  }
+});
