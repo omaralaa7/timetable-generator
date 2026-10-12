@@ -53,13 +53,13 @@ const BASE: Staff[] = [
 ];
 
 // [office hours, advising hours, quality hours] — client, 2026-10-12:
-// office hours: 4 for everyone, 6 for the head of department (Gomaa) and the vice dean (Mahmoud, plus
-// one hour she added so he reaches his minimum); advising: at most 4, none for Ahmed Salem, Mahmoud
+// office hours: 4 for everyone, 6 for the head of department (Gomaa) and the vice dean (Mahmoud — the
+// extra hour she once added for him is no longer needed with the corrected power master); advising: at most 4, none for Ahmed Salem, Mahmoud
 // and Gomaa — except Mai Helmy (6) and the teaching assistant (8), raised with her approval so that
 // they reach their minimum; quality: 2 for everyone; the teaching assistant has neither office hours nor quality.
 const HOURS: Record<string, [number, number, number]> = {
   'asmaa-radi': [4, 4, 2], 'ahmed-salem': [4, 0, 2], 'mai-helmy': [4, 6, 2], 'hend-elsayed': [4, 4, 2],
-  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [4, 4, 2], 'mahmoud-elsadd': [7, 0, 2], 'gomaa-fahmy': [6, 0, 2],
+  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [4, 4, 2], 'mahmoud-elsadd': [6, 0, 2], 'gomaa-fahmy': [6, 0, 2],
   'eman-awad': [4, 4, 2], 'tamer-elsharkawy': [0, 8, 0],
 };
 

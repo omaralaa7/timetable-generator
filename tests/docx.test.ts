@@ -88,8 +88,7 @@ test('both Word masters parse with the expected structure', () => {
     }
   }
   assert.equal(comms.warnings.length, 0);
-  // power has one orphan cell (`/ Lab 825`) left behind in the master
-  assert.deepEqual(power.warnings.map((w) => w.kind), ['unknown-type']);
+  assert.equal(power.warnings.length, 0);
 });
 
 test('Asmaa Radi: lectures and who is underlined match her sheet', () => {

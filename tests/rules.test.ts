@@ -94,7 +94,8 @@ test('a lecture written once with its code and once without is one course; the c
   const rows = sheet('asmaa-abdelrahim').courses.filter((c) => c.name.includes('نظم القياسات'));
   assert.deepEqual(rows.map((c) => `${c.name} | ${c.share} | ${c.weeks}`), ['اختيارى 1 (ELP 3E1) (نظم القياسات) | 0.5 | 9 - 15']);
   const cells = sheet('asmaa-abdelrahim').items.filter((it) => it.type === 'lecture' && it.text.includes('نظم القياسات'));
-  assert.deepEqual(cells.map((it) => `${it.day}:${it.slots.join(',')}`), ['1:4,5']); // Sunday 12:30 only; Monday 04:00 is dropped
+  // one lecture a week (Monday 02:15 in the corrected power master), written with its code
+  assert.deepEqual(cells.map((it) => `${it.day}:${it.slots.join(',')}`), ['2:6,7']);
   assert.ok(cells[0].text.includes('(ELP 3E1)'));
 });
 
@@ -105,7 +106,7 @@ test('duties follow the client notes: fixed office hours, none on Saturday, TA w
     assert.ok(s.totals.office <= (s.staff.officeHours ?? 4), `${s.staff.name}: office ${s.totals.office}`);
   }
   assert.equal(sheet('gomaa-fahmy').totals.office, 6);
-  assert.equal(sheet('mahmoud-elsadd').totals.office, 7); // 6 as vice dean + the hour the client added
+  assert.equal(sheet('mahmoud-elsadd').totals.office, 6);
   for (const s of result.sheets) {
     // at most 4, except the two the client allowed more so that they reach their minimum
     const cap = { 'mai-helmy': 6, 'tamer-elsharkawy': 8 }[s.staff.id] ?? 4;

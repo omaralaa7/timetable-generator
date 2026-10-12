@@ -248,10 +248,12 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     key(y.parsed.title) === key(x.parsed.title) && key(y.parsed.subtitle) === key(x.parsed.subtitle))));
   // Same time, a doctor in common and the same room or course → the same lecture; the fuller cell is kept.
   const doctorKeys = (s: Session) => s.parsed.names.filter((t) => t.role === 'doctor').map((t) => nameKey(t.name));
+  const sameRoom = (x: string, y: string) => key(x) === key(y) || (key(x).length > 3 && key(y).length > 3 && (key(x).startsWith(key(y)) || key(y).startsWith(key(x))));
   const sameLecture = (a: Session, b: Session) =>
     a.day === b.day && a.slots.join() === b.slots.join() && doctorKeys(a).some((k) => doctorKeys(b).includes(k)) &&
     // the same room, or the same course with the room written differently (`مدرج 7` / `مدرج كهرباء`)
-    (key(a.parsed.room) === key(b.parsed.room) || courseKey(a.parsed) === courseKey(b.parsed));
+    // (a stray character after the room, as in `مدرج 3 (No. 328) 1`, must not split a joint lecture)
+    (sameRoom(a.parsed.room, b.parsed.room) || courseKey(a.parsed) === courseKey(b.parsed));
   const unique: Session[] = [];
   for (const s of lectures.filter((x) => !copies.has(x)).sort((a, b) => doctorKeys(b).length - doctorKeys(a).length)) {
     if (!unique.some((u) => sameLecture(u, s))) unique.push(s);

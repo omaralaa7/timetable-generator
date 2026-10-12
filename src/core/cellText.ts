@@ -27,7 +27,8 @@ function detectType(n: string): SessionType {
   if (/انشطه (طلابيه|وندوات)/.test(n)) return 'ignore';
   if (/مشروع التخرج/.test(n)) return 'project';
   // Power writes its electives without the word `محاضرة`: `اختيارى 1 (ميكاترونكس) [ELP3E1]…`
-  if (/محاضره|مقرر اختياري|^اختياري/.test(n)) return 'lecture';
+  // `ختيارى 1 (…)` is `اختيارى` with the first letter lost (seen in the power master).
+  if (/محاضره|مقرر اختياري|^ا?ختياري/.test(n)) return 'lecture';
   if (/عملي|معمل|تمرين|ورش|^[تم]\s/.test(n)) return 'section';
   return 'unknown';
 }
@@ -161,7 +162,7 @@ export function parseCellText(runs: Run[]): ParsedText {
   }
   const [ts, te] = trimRange(n, kindLen, titleEnd, /[\s/\-.:]/);
   const [rs, re] = trimRange(n, Math.min(roomStart, n.length), n.length, /[\s/\-)\]&]/);
-  let title = slice(ts, te);
+  let title = slice(ts, te).replace(/^ختيار/, 'اختيار');
   // A code typed without brackets stays in the first segment: `… المعلومات ELC 151 (د. …`, `رياضيات 3-MAT101-`
   const bare = /[\s\-]*\b(?!LAB)([A-Z]{3})\s*(\d[0-9A-Z]{2,3})\b[\s\-]*/.exec(title);
   if (bare) {
