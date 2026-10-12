@@ -239,6 +239,13 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   };
 
   // ── Lectures (§5.1, §5.2). A level-1 lecture shared by two programmes is one lecture. ──
+  // A second lecture of a course is sometimes written without its code (power: `اختيارى 1 (نظم القياسات)`
+  // on Monday, with the code only on Sunday's cell). Same programme, same title → the same course.
+  for (const s of lectures.filter((x) => !x.parsed.code)) {
+    const twin = lectures.find((x) => x.parsed.code && x.programme === s.programme &&
+      key(x.parsed.title) === key(s.parsed.title) && key(x.parsed.subtitle) === key(s.parsed.subtitle));
+    if (twin) s.parsed.code = twin.parsed.code;
+  }
   // Same time, a doctor in common and the same room or course → the same lecture; the fuller cell is kept.
   const doctorKeys = (s: Session) => s.parsed.names.filter((t) => t.role === 'doctor').map((t) => nameKey(t.name));
   const sameLecture = (a: Session, b: Session) =>
@@ -295,7 +302,10 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     for (const id of mine) {
       const share = doctors.length <= 1 ? 1 : Math.round(100 / doctors.length) / 100;
       const weeks = doctors.length <= 1 ? '1 - 15' : doctors.length > 2 || !first ? '؟' : first === id ? '1 - 7' : '9 - 15';
-      if (!courses.get(id)!.has(ck)) courses.get(id)!.set(ck, { key: ck, name: courseName(p), share, weeks, order: order++ });
+      // One row per course. If one cell lists a single doctor and another both, the shared one is right.
+      const row = courses.get(id)!.get(ck);
+      if (!row) courses.get(id)!.set(ck, { key: ck, name: courseName(p), share, weeks, order: order++ });
+      else if (share < row.share) Object.assign(row, { share, weeks });
       place(id, { day: s.day, slots: s.slots, type: 'lecture', text: lectureText(p), sessionId: s.id, origin: 'master' }, lectureText(p), weeks);
     }
   }

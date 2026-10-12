@@ -89,3 +89,11 @@ test('PDF wrapper: valid structure, one page per picture', async () => {
   entries.forEach((line, i) => assert.ok(text.startsWith(`${i + 1} 0 obj`, Number(line.slice(0, 10))), `object ${i + 1}`));
   assert.equal(entries.length, 8);
 });
+
+test('a lecture written once with its code and once without is one course (نظم القياسات)', () => {
+  const rows = sheet('asmaa-abdelrahim').courses.filter((c) => c.name.includes('نظم القياسات'));
+  assert.deepEqual(rows.map((c) => `${c.name} | ${c.share} | ${c.weeks}`), ['اختيارى 1 (ELP 3E1) (نظم القياسات) | 0.5 | 9 - 15']);
+  const cells = sheet('asmaa-abdelrahim').items.filter((it) => it.type === 'lecture' && it.text.includes('نظم القياسات'));
+  assert.equal(cells.length, 2);
+  assert.ok(cells.every((it) => it.text.includes('(ELP 3E1)')));
+});
