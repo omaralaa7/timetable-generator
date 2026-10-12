@@ -52,11 +52,13 @@ const BASE: Staff[] = [
   { id: 'tamer-elsharkawy', name: 'م/تامر الشرقاوى', aliases: ['تامر الشرقاوى', 'تامر'], programme: POWER, rank: 'ta', advising: true, secondmentDay: null, qualityHours: 2 },
 ];
 
-// Office / advising / quality hours as on the hand-made sheets (brief §10).
+// [office hours, advising hours, quality hours] — client, 2026-10-12:
+// office hours are 4 for everyone, 6 for the head of department (Gomaa) and the vice dean (Mahmoud);
+// the teaching assistant has neither office hours nor quality; Ahmed Salem, Mahmoud and Gomaa do not advise.
 const HOURS: Record<string, [number, number, number]> = {
-  'asmaa-radi': [4, 4, 2], 'ahmed-salem': [4, 0, 2], 'mai-helmy': [5, 4, 2], 'hend-elsayed': [4, 4, 2],
-  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [5, 6, 5], 'mahmoud-elsadd': [6, 0, 4], 'gomaa-fahmy': [8, 0, 4],
-  'eman-awad': [6, 5, 2], 'tamer-elsharkawy': [0, 6, 5],
+  'asmaa-radi': [4, 4, 2], 'ahmed-salem': [4, 0, 2], 'mai-helmy': [4, 4, 2], 'hend-elsayed': [4, 4, 2],
+  'ahmed-elsayed': [4, 4, 2], 'asmaa-abdelrahim': [4, 6, 5], 'mahmoud-elsadd': [6, 0, 4], 'gomaa-fahmy': [6, 0, 4],
+  'eman-awad': [4, 5, 2], 'tamer-elsharkawy': [0, 6, 0],
 };
 
 /** Seed roster from brief §6 and the hand-made sheets. Editable in the UI; this is only the starting point. */

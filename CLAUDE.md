@@ -242,3 +242,10 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - Each sheet can be downloaded as **PDF** as well as Excel: per person, or all in a zip that also holds one combined `كل الجداول الفردية.pdf` (one person per page) for printing.
 - How: `src/ui/sheetCanvas.ts` draws the sheet on a canvas in the Excel layout (the browser shapes the Arabic), and `src/core/pdf.ts` wraps the JPEG in a minimal PDF, A4 landscape. No library, no embedded font. The text in the PDF is a picture, not selectable. Edits made on the page are included; later edits to the downloaded Excel are not.
 - **One course, two cells** (client, 2026-10-12): in power, `اختيارى 1 (نظم القياسات)` appears on Sunday with its code `[ELP3E1]` and both doctors, and on Monday without the code and with only Dr. Asmaa Abdelrahim. It is one course — the coded cell is the correct one. A lecture without a code takes the code of the lecture with the same title in the same programme; a course gets one row, with the shared (smaller) share and its weeks.
+
+## 21. Client notes on duties (2026-10-12) — supersede earlier hours
+- **Office hours are fixed:** 6 for ا.م.د. جمعه (head of department) and ا.د. محمود (vice dean), **4 for every other doctor**, **none for the teaching assistant**. They no longer grow to fill the minimum load.
+- **No office hours or advising on Saturday** (no students that day). Quality may still fall there.
+- **م. تامر: no office hours and no quality.** د. أحمد سالم, ا.د. محمود, ا.م.د. جمعه: no advising (repeated).
+- To reach the minimum load only **advising** can grow, and only for advisors. A non-advisor who is short stays short and is listed under "أقل من النصاب".
+- Saved projects carry `dataVersion` (`src/ui/state.ts`). When it is older than `DATA_VERSION`, the built-in staff list is replaced by the current one (staff the user added are kept, decisions are kept) and the masters must be uploaded again. **Bump `DATA_VERSION` whenever the seed roster or the parsers change** — otherwise returning users keep stale data (this is why the client still saw advising on Dr. Ahmed Salem).

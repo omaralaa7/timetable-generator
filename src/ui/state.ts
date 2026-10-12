@@ -16,6 +16,7 @@ export interface StoredMaster {
 /** Everything the user has done. Saved in the browser and exportable as a project file (brief §8). */
 export interface Project {
   version: 1;
+  dataVersion?: number;
   masters: StoredMaster[];
   roster: Staff[];
   decisions: Decisions;
@@ -24,9 +25,19 @@ export interface Project {
 
 const KEY = 'individual-timetables-project-v1';
 
+/**
+ * Raised whenever the built-in staff data or the way masters are read changes. A project saved by an
+ * older version then gets the new staff list and asks for the masters again, so nobody keeps working
+ * on stale data. The user's own decisions and any staff they added are kept.
+ */
+export const DATA_VERSION = 2;
+/** True when the saved project came from an older version and was refreshed on load. */
+export let refreshed = false;
+
 export function emptyProject(): Project {
   return {
     version: 1,
+    dataVersion: DATA_VERSION,
     masters: [],
     roster: structuredClone(SEED_ROSTER),
     decisions: {},
@@ -39,8 +50,15 @@ export function normaliseProject(raw: unknown): Project {
   const p = raw as Partial<Project> | null;
   if (!p || typeof p !== 'object' || !Array.isArray(p.roster)) throw new Error('ملف المشروع غير صالح');
   const base = emptyProject();
+  if (p.dataVersion !== DATA_VERSION) {
+    refreshed = true;
+    const builtIn = new Set(base.roster.map((x) => x.id));
+    const added = p.roster.filter((x) => typeof x?.id === 'string' && x.id.startsWith('staff-') && !builtIn.has(x.id));
+    return { ...base, roster: [...base.roster, ...added], decisions: p.decisions ?? {}, settings: { ...base.settings, ...p.settings } };
+  }
   return {
     version: 1,
+    dataVersion: DATA_VERSION,
     masters: Array.isArray(p.masters) ? p.masters : [],
     roster: p.roster,
     decisions: p.decisions ?? {},

@@ -94,6 +94,8 @@ export interface Result {
 export const MINIMUM: Record<Rank, number> = { professor: 25, associate: 27, lecturer: 29, ta: 33 };
 const DUTY_TEXT = { office: 'ساعات مكتبية', advising: 'ارشاد أكاديمي', quality: 'جودة' } as const;
 const PAIRS = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]];
+/** Saturday: no students in the faculty, so no office hours or advising are placed there (client, 2026-10-12). */
+const NO_STUDENTS_DAY = 0;
 
 /**
  * Who teaches weeks 1–7 where the master has no underline — answered by the client (2026-10-09).
@@ -458,9 +460,8 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
 }
 
 /**
- * Suggest quality, office-hour and advising blocks in free slots: 2-slot blocks
- * first, never on the secondment day, Thursday only when nothing else is left.
- * Office hours and advising grow until the minimum load is reached.
+ * Suggest quality, office-hour and advising blocks in free slots: 2-slot blocks first, never on the
+ * secondment day, no office hours or advising on Saturday, Thursday only when nothing else is left.
  */
 function suggestDuties(staff: Staff, items: GridItem[]): void {
   const taken = (day: number, slot: number) => items.some((it) => it.day === day && it.slots.includes(slot));
@@ -471,7 +472,7 @@ function suggestDuties(staff: Staff, items: GridItem[]): void {
       while (left >= size) {
         const spots: { day: number; slots: number[]; rank: number }[] = [];
         for (let day = 0; day < 6; day++) {
-          if (day === staff.secondmentDay) continue;
+          if (day === staff.secondmentDay || (day === NO_STUDENTS_DAY && type !== 'quality')) continue;
           const blocks = size === 2 ? PAIRS : PAIRS.flat().map((s) => [s]);
           for (const slots of blocks) {
             if (slots.some((s) => taken(day, s))) continue;
@@ -494,6 +495,7 @@ function suggestDuties(staff: Staff, items: GridItem[]): void {
   for (const p of staff.presets ?? []) {
     if (p.type !== 'office' && p.type !== 'advising' && p.type !== 'quality') continue;
     if (p.day === staff.secondmentDay || (p.type === 'advising' && !canAdvise)) continue;
+    if (p.day === NO_STUDENTS_DAY && p.type !== 'quality') continue;
     const want = { office: staff.officeHours ?? 4, advising: staff.advisingHours ?? 4, quality: staff.qualityHours }[p.type];
     for (const run of p.slots.filter((s) => !taken(p.day, s)).map((s) => [s])) {
       if (hours(p.type) >= want) break;
@@ -505,12 +507,10 @@ function suggestDuties(staff: Staff, items: GridItem[]): void {
   // … then whatever is still missing.
   if (canAdvise) add('advising', Math.max(0, (staff.advisingHours ?? 4) - hours('advising')));
   add('office', Math.max(0, (staff.officeHours ?? 4) - hours('office')));
-  // Top up to the minimum, alternating office hours and advising.
-  let turn: 'office' | 'advising' = 'office';
-  while (counted() < MINIMUM[staff.rank]) {
-    const need = Math.min(2, MINIMUM[staff.rank] - counted());
-    if (!add(canAdvise ? turn : 'office', need)) break;
-    turn = turn === 'office' ? 'advising' : 'office';
+  // Office hours are a fixed number per person (client, 2026-10-12), so only advising can grow
+  // to reach the minimum load — and only for advisors. Anyone else stays short and is reported.
+  while (canAdvise && counted() < MINIMUM[staff.rank]) {
+    if (!add('advising', Math.min(2, MINIMUM[staff.rank] - counted()))) break;
   }
   add('quality', Math.max(0, staff.qualityHours - hours('quality')));
 }

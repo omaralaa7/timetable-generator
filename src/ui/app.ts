@@ -8,7 +8,7 @@ import { imagesToPdf } from '../core/pdf.ts';
 import { sheetFileName, writeSheet } from '../core/writer.ts';
 import { icon, type IconName } from './icons.ts';
 import { sheetPage } from './sheetCanvas.ts';
-import { loadProject, saveProject, type Project } from './state.ts';
+import { loadProject, refreshed, saveProject, type Project } from './state.ts';
 
 type Tab = 'files' | 'sheets' | 'issues' | 'settings';
 
@@ -32,7 +32,7 @@ const ISSUE_TITLES: Record<Issue['kind'], string> = {
 const project: Project = loadProject();
 let tab: Tab = project.masters.length ? 'sheets' : 'files';
 let person = '';
-let message = '';
+let message = refreshed ? 'تم تحديث البرنامج. برجاء رفع الجداول الرئيسية مرة أخرى لتطبيق التحديث — قراراتك السابقة محفوظة.' : '';
 let result: Result = generate(project.masters, project.roster, project.decisions);
 /** Uploaded Excel files kept in memory so another sheet can be chosen without re-uploading. */
 const fileData = new Map<string, ArrayBuffer>();
