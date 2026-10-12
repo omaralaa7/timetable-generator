@@ -100,12 +100,16 @@ test('a lecture written once with its code and once without is one course (نظ�
 
 test('duties follow the client notes: fixed office hours, none on Saturday, TA without office or quality', () => {
   for (const s of result.sheets) {
-    const saturday = s.items.filter((it) => it.day === 0 && (it.type === 'office' || it.type === 'advising'));
+    const saturday = s.items.filter((it) => it.day === 0 && (it.type === 'office' || it.type === 'advising' || it.type === 'quality'));
     assert.deepEqual(saturday.map((it) => it.text), [], s.staff.name);
     assert.ok(s.totals.office <= (s.staff.officeHours ?? 4), `${s.staff.name}: office ${s.totals.office}`);
   }
   assert.equal(sheet('gomaa-fahmy').totals.office, 6);
-  assert.equal(sheet('mahmoud-elsadd').totals.office, 6);
+  assert.equal(sheet('mahmoud-elsadd').totals.office, 7); // 6 as vice dean + the hour the client added
+  for (const s of result.sheets) {
+    assert.ok(s.totals.advising <= 4, `${s.staff.name}: advising ${s.totals.advising}`);
+    assert.ok(s.totals.quality <= 2, `${s.staff.name}: quality ${s.totals.quality}`);
+  }
   assert.equal(sheet('asmaa-radi').totals.office, 4);
   for (const id of ['ahmed-salem', 'mahmoud-elsadd', 'gomaa-fahmy']) assert.equal(sheet(id).totals.advising, 0, id);
   const tamer = sheet('tamer-elsharkawy').totals;
