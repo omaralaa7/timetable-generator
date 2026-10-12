@@ -241,13 +241,11 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   };
 
   // ── Lectures (§5.1, §5.2). A level-1 lecture shared by two programmes is one lecture. ──
-  // A second lecture of a course is sometimes written without its code (power: `اختيارى 1 (نظم القياسات)`
-  // on Monday, with the code only on Sunday's cell). Same programme, same title → the same course.
-  for (const s of lectures.filter((x) => !x.parsed.code)) {
-    const twin = lectures.find((x) => x.parsed.code && x.programme === s.programme &&
-      key(x.parsed.title) === key(s.parsed.title) && key(x.parsed.subtitle) === key(s.parsed.subtitle));
-    if (twin) s.parsed.code = twin.parsed.code;
-  }
+  // A course's lecture is the cell that carries its code. Power also has `اختيارى 1 (نظم القياسات)` on
+  // Monday without the code and with one doctor: the client (2026-10-12) said it is the same course and
+  // must not be counted — the coded cell is the right one. So a code-less copy of a coded lecture is dropped.
+  const copies = new Set(lectures.filter((x) => !x.parsed.code && lectures.some((y) => y.parsed.code && y.programme === x.programme &&
+    key(y.parsed.title) === key(x.parsed.title) && key(y.parsed.subtitle) === key(x.parsed.subtitle))));
   // Same time, a doctor in common and the same room or course → the same lecture; the fuller cell is kept.
   const doctorKeys = (s: Session) => s.parsed.names.filter((t) => t.role === 'doctor').map((t) => nameKey(t.name));
   const sameLecture = (a: Session, b: Session) =>
@@ -255,7 +253,7 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     // the same room, or the same course with the room written differently (`مدرج 7` / `مدرج كهرباء`)
     (key(a.parsed.room) === key(b.parsed.room) || courseKey(a.parsed) === courseKey(b.parsed));
   const unique: Session[] = [];
-  for (const s of [...lectures].sort((a, b) => doctorKeys(b).length - doctorKeys(a).length)) {
+  for (const s of lectures.filter((x) => !copies.has(x)).sort((a, b) => doctorKeys(b).length - doctorKeys(a).length)) {
     if (!unique.some((u) => sameLecture(u, s))) unique.push(s);
   }
   // A course taught in several programmes: one underlined cell settles the weeks for all of them.

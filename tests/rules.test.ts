@@ -90,12 +90,12 @@ test('PDF wrapper: valid structure, one page per picture', async () => {
   assert.equal(entries.length, 8);
 });
 
-test('a lecture written once with its code and once without is one course (نظم القياسات)', () => {
+test('a lecture written once with its code and once without is one course; the code-less copy is not counted', () => {
   const rows = sheet('asmaa-abdelrahim').courses.filter((c) => c.name.includes('نظم القياسات'));
   assert.deepEqual(rows.map((c) => `${c.name} | ${c.share} | ${c.weeks}`), ['اختيارى 1 (ELP 3E1) (نظم القياسات) | 0.5 | 9 - 15']);
   const cells = sheet('asmaa-abdelrahim').items.filter((it) => it.type === 'lecture' && it.text.includes('نظم القياسات'));
-  assert.equal(cells.length, 2);
-  assert.ok(cells.every((it) => it.text.includes('(ELP 3E1)')));
+  assert.deepEqual(cells.map((it) => `${it.day}:${it.slots.join(',')}`), ['1:4,5']); // Sunday 12:30 only; Monday 04:00 is dropped
+  assert.ok(cells[0].text.includes('(ELP 3E1)'));
 });
 
 test('duties follow the client notes: fixed office hours, none on Saturday, TA without office or quality', () => {
