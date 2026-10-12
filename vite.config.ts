@@ -12,7 +12,8 @@ export default defineConfig({
     emptyOutDir: false,
     chunkSizeWarningLimit: 2500,
     rollupOptions: {
-      output: { entryFileNames: 'assets/app.js', chunkFileNames: 'assets/[name].js', assetFileNames: 'assets/app[extname]' },
+      // Hashed names: a new build is a new file, so browsers never keep running an old copy.
+      output: { entryFileNames: 'assets/app-[hash].js', chunkFileNames: 'assets/[name]-[hash].js', assetFileNames: 'assets/app-[hash][extname]' },
     },
   },
 });

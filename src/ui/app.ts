@@ -32,7 +32,7 @@ const ISSUE_TITLES: Record<Issue['kind'], string> = {
 const project: Project = loadProject();
 let tab: Tab = project.masters.length ? 'sheets' : 'files';
 let person = '';
-let message = refreshed ? 'تم تحديث البرنامج. برجاء رفع الجداول الرئيسية مرة أخرى لتطبيق التحديث — قراراتك السابقة محفوظة.' : '';
+let message = refreshed ? 'تم تحديث البرنامج. برجاء رفع الجداول الرئيسية مرة أخرى لتطبيق التحديث. قراراتك الاختيارية محفوظة، أما التعديلات اليدوية على خانات الجداول فأُعيدت إلى اقتراح البرنامج.' : '';
 let result: Result = generate(project.masters, project.roster, project.decisions);
 /** Uploaded Excel files kept in memory so another sheet can be chosen without re-uploading. */
 const fileData = new Map<string, ArrayBuffer>();

@@ -28,9 +28,9 @@ const KEY = 'individual-timetables-project-v1';
 /**
  * Raised whenever the built-in staff data or the way masters are read changes. A project saved by an
  * older version then gets the new staff list and asks for the masters again, so nobody keeps working
- * on stale data. The user's own decisions and any staff they added are kept.
+ * on stale data. Review choices and any staff the user added are kept; hand edits of a person's grid are reset.
  */
-export const DATA_VERSION = 4;
+export const DATA_VERSION = 5;
 /** True when the saved project came from an older version and was refreshed on load. */
 export let refreshed = false;
 
@@ -54,7 +54,10 @@ export function normaliseProject(raw: unknown): Project {
     refreshed = true;
     const builtIn = new Set(base.roster.map((x) => x.id));
     const added = p.roster.filter((x) => typeof x?.id === 'string' && x.id.startsWith('staff-') && !builtIn.has(x.id));
-    return { ...base, roster: [...base.roster, ...added], decisions: p.decisions ?? {}, settings: { ...base.settings, ...p.settings } };
+    // Review choices still apply. Hand-edited cells, frozen duty blocks and edited course tables were made
+    // on top of the old rules (they can hold advising or office hours the new rules no longer give), so they go.
+    const { starts, supervisor, names, dismissed } = p.decisions ?? {};
+    return { ...base, roster: [...base.roster, ...added], decisions: { starts, supervisor, names, dismissed }, settings: { ...base.settings, ...p.settings } };
   }
   return {
     version: 1,
