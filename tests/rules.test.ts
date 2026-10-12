@@ -72,3 +72,20 @@ test('written sheet: layout anchors of the sample', async () => {
   assert.equal(ws.views[0].rightToLeft, true);
   assert.equal(ws.pageSetup.paperSize, 9);
 });
+
+test('PDF wrapper: valid structure, one page per picture', async () => {
+  const { imagesToPdf } = await import('../src/core/pdf.ts');
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]);
+  const pdf = imagesToPdf([{ jpeg, width: 20, height: 10 }, { jpeg, width: 20, height: 10 }]);
+  const text = Buffer.from(pdf).toString('latin1');
+  assert.ok(text.startsWith('%PDF-1.4'));
+  assert.ok(text.trimEnd().endsWith('%%EOF'));
+  assert.match(text, /\/Count 2/);
+  assert.equal(text.match(/\/Filter \/DCTDecode/g)?.length, 2);
+  // every cross-reference entry points at the start of its object
+  const xref = Number(/startxref\n(\d+)/.exec(text)![1]);
+  assert.ok(text.startsWith('xref', xref));
+  const entries = text.slice(xref).split('\n').slice(3).filter((l) => / n $/.test(l));
+  entries.forEach((line, i) => assert.ok(text.startsWith(`${i + 1} 0 obj`, Number(line.slice(0, 10))), `object ${i + 1}`));
+  assert.equal(entries.length, 8);
+});

@@ -237,3 +237,7 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 - Steps: upload → individual sheets → optional decisions → settings. Inline SVG icons (`src/ui/icons.ts`, Lucide paths, no network), coloured primary / Excel-green download buttons, stat cards for the totals.
 - Phones (≤760px): the weekly grid is replaced by a per-day list (`dayList`), with "+ إضافة" to fill a free slot; touch targets ≥44px; inputs 16px (no iOS zoom); nothing scrolls sideways.
 - Owner removed the project-file / start-over section on purpose (too distracting for the client).
+
+## 20. PDF output (client request, 2026-10-12)
+- Each sheet can be downloaded as **PDF** as well as Excel: per person, or all in a zip that also holds one combined `كل الجداول الفردية.pdf` (one person per page) for printing.
+- How: `src/ui/sheetCanvas.ts` draws the sheet on a canvas in the Excel layout (the browser shapes the Arabic), and `src/core/pdf.ts` wraps the JPEG in a minimal PDF, A4 landscape. No library, no embedded font. The text in the PDF is a picture, not selectable. Edits made on the page are included; later edits to the downloaded Excel are not.

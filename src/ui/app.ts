@@ -4,8 +4,10 @@ import type { Staff } from '../core/roster.ts';
 import { type GridItem, type Issue, type ItemType, type Result, type StaffSheet } from '../core/rules.ts';
 import { SLOT_LABELS } from '../core/slots.ts';
 import type { Rank } from '../core/types.ts';
+import { imagesToPdf } from '../core/pdf.ts';
 import { sheetFileName, writeSheet } from '../core/writer.ts';
 import { icon, type IconName } from './icons.ts';
+import { sheetPage } from './sheetCanvas.ts';
 import { loadProject, saveProject, type Project } from './state.ts';
 
 type Tab = 'files' | 'sheets' | 'issues' | 'settings';
@@ -123,7 +125,7 @@ function filesView(): string {
         <summary>${icon('book')} طريقة الاستخدام</summary>
         <ol>
           <li><b>ارفع الجداول الرئيسية</b> ثم اضغط «إنشاء الجداول الفردية».</li>
-          <li><b>الجداول الفردية</b>: اختر العضو لترى جدوله، واضغط «تنزيل كل الجداول» للحصول على ملفات Excel.</li>
+          <li><b>الجداول الفردية</b>: اختر العضو لترى جدوله، واضغط «تنزيل الكل» للحصول على الجداول بصيغة Excel أو PDF.</li>
           <li><b>قرارات اختيارية</b>: حالات لم يستطع البرنامج حسمها وحده (مثلاً من يشرف على معمل). إن تركتها يُستخدم اقتراح البرنامج.</li>
         </ol>
         <p>إذا تغيّر جدول رئيسي، ارفعه مرة أخرى بنفس اسم الملف وسيُستبدل القديم وتبقى قراراتك. ملفات PDF غير مدعومة.</p>
@@ -203,7 +205,8 @@ function personView(sheet: StaffSheet): string {
         </div>
         <div class="row">
           ${edited ? `<button data-act="reset-person" data-id="${esc(sheet.staff.id)}" class="link">${icon('undo', 15)} إلغاء تعديلاتي</button>` : ''}
-          <button data-act="download-one" data-id="${esc(sheet.staff.id)}" class="excel">${icon('download')} تنزيل هذا الجدول (Excel)</button>
+          <button data-act="download-one" data-id="${esc(sheet.staff.id)}" class="excel">${icon('excel')} Excel</button>
+          <button data-act="pdf-one" data-id="${esc(sheet.staff.id)}" class="pdf">${icon('word')} PDF</button>
         </div>
       </div>
       <div class="stats">
@@ -239,7 +242,10 @@ function sheetsView(): string {
           <b>تم إنشاء ${result.sheets.length} جدولاً فردياً</b>
           ${open ? `<span class="hint">يوجد ${open} قرار اختياري — <button data-tab="issues" class="link">عرضها</button></span>` : '<span class="hint">كل شيء جاهز للتنزيل</span>'}
         </div>
-        <button data-act="download-all" class="primary big">${icon('download', 20)} تنزيل كل الجداول</button>
+        <div class="row downloads">
+          <button data-act="download-all" class="excel big">${icon('download', 20)} تنزيل الكل Excel</button>
+          <button data-act="pdf-all" class="pdf big">${icon('download', 20)} تنزيل الكل PDF</button>
+        </div>
       </div>
       <h2>${icon('users', 20)} معاينة جدول عضو</h2>
       <div class="people" role="tablist">${result.sheets.map((s) => `<button role="tab" aria-selected="${s === current}" data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)}</button>`).join('')}</div>
@@ -410,6 +416,27 @@ async function downloadAll(): Promise<void> {
   download('الجداول الفردية.zip', await zip.generateAsync({ type: 'blob' }), 'application/zip');
 }
 
+const pdfName = (sheet: StaffSheet) => sheetFileName(sheet).replace(/\.xlsx$/, '.pdf');
+
+async function pdfOne(id: string): Promise<void> {
+  const sheet = staffSheet(id);
+  if (!sheet) return;
+  download(pdfName(sheet), imagesToPdf([await sheetPage(sheet, project.settings)]) as BlobPart, 'application/pdf');
+}
+
+/** Every sheet as its own PDF, plus one PDF with all of them for printing in one go. */
+async function pdfAll(): Promise<void> {
+  const zip = new JSZip();
+  const pages = [];
+  for (const sheet of result.sheets) {
+    const page = await sheetPage(sheet, project.settings);
+    pages.push(page);
+    zip.file(pdfName(sheet), imagesToPdf([page]));
+  }
+  zip.file('كل الجداول الفردية.pdf', imagesToPdf(pages));
+  download('الجداول الفردية PDF.zip', await zip.generateAsync({ type: 'blob' }), 'application/zip');
+}
+
 function editCourses(change: (rows: StaffSheet['courses']) => void): void {
   const sheet = staffSheet(person) ?? result.sheets[0];
   if (!sheet) return;
@@ -505,6 +532,10 @@ root.addEventListener('click', (e) => {
       return editCourses((rows) => rows.splice(index, 1));
     case 'download-one':
       return void downloadOne(id);
+    case 'pdf-one':
+      return void pdfOne(id);
+    case 'pdf-all':
+      return void pdfAll();
     case 'download-all':
       return void downloadAll();
   }
