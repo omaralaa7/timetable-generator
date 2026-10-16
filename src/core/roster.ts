@@ -70,7 +70,7 @@ const HOURS: Record<string, [number, number, number]> = {
 
 /**
  * Seconded doctors (client, 2026-10-16): from other faculties, teaching in the comms and power programmes.
- * Proposed from the masters; the client confirms the list in the settings step.
+ * Confirmed by the client (2026-10-16); she can add or remove them in the settings step.
  */
 const SECONDED: { id: string; name: string; aliases: string[]; rank: Rank }[] = [
   { id: 'sec-ahmed-elmeligy', name: 'ا.م.د/ احمد المليجى', aliases: ['احمد المليجى'], rank: 'associate' },
@@ -79,6 +79,9 @@ const SECONDED: { id: string; name: string; aliases: string[]; rank: Rank }[] = 
   { id: 'sec-basant-samir', name: 'د/ بسنت سمير', aliases: ['بسنت سمير'], rank: 'lecturer' },
   { id: 'sec-abdelwahab-elesawy', name: 'ا.د/ عبد الوهاب العيسوى', aliases: ['عبد الوهاب العيسوى', 'عبد الوهاي العيسوى', 'عبد الوهاب'], rank: 'professor' },
   { id: 'sec-sayed-mohamed', name: 'د/ سيد محمد احمد', aliases: ['سيد محمد احمد'], rank: 'lecturer' },
+  // confirmed by the client, 2026-10-16
+  { id: 'sec-hamdy-elshamy', name: 'د/ حمدى الشامى', aliases: ['حمدى الشامى', 'حمدي الشامي'], rank: 'lecturer' },
+  { id: 'sec-ahmed-bakir', name: 'د/ احمد بكير', aliases: ['احمد بكير'], rank: 'lecturer' },
 ];
 
 /** Seed roster from brief §6 and the hand-made sheets. Editable in the UI; this is only the starting point. */

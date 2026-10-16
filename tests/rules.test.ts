@@ -131,12 +131,14 @@ test('Tuesday third period (12:30–02:10) is kept for activities on every sheet
 
 test('seconded doctors get an attendance sheet: lectures and supervision only', () => {
   const seconded = result.sheets.filter((s) => s.staff.kind === 'seconded');
-  assert.ok(seconded.length >= 6);
+  assert.equal(seconded.length, 8);
   for (const s of seconded) {
     assert.deepEqual([...new Set(s.items.map((it) => it.type))].filter((t) => t !== 'lecture' && t !== 'supervision'), [], s.staff.name);
     assert.ok(s.items.some((it) => it.type === 'lecture'), `${s.staff.name} has no lecture`);
   }
   // department doctors still come first: a seconded doctor never holds a lab a department doctor could take
+  const app = sheet('sec-abdelwahab-elesawy').courses.find((c) => c.name.includes('تطبيقات الكترونيات القوى'))!;
+  assert.deepEqual([app.share, app.weeks], [0.5, '1 - 7']);
   const elmeligy = sheet('sec-ahmed-elmeligy');
   assert.ok(elmeligy.courses.some((c) => c.name.includes('ELC 331')));
 });

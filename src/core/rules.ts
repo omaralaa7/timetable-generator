@@ -115,6 +115,8 @@ const CLIENT_STARTS: { code: string; title?: string; subtitle?: string; first: s
   // Mechanics, as on the hand-made sheets. ELP 331 is a different course in the power programme.
   { code: 'ELP 331', title: 'الات القوى الكهربية', first: 'احمد السيد' },
   { code: 'ELP 4E2', title: 'اختيارى 4 الالات الخاصة', first: 'عبد الوهاب العيسوى' },
+  // Seconded doctors (client, 2026-10-16). ELP 4E1 is also the code of a different elective, hence the title.
+  { code: 'ELP 4E1', title: 'اختيارى 3 تطبيقات الكترونيات القوى', first: 'عبد الوهاب العيسوى' },
 ];
 
 /**
