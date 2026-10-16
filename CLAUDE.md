@@ -262,3 +262,9 @@ Reproduce `samples/expected/asmaa_radi.xlsx` (doctor) and `samples/expected/tame
 ## 23. Activities period (client, 2026-10-13)
 - **Tuesday, third period (12:30–02:10, slots 5–6) is `أنشطة` on every individual timetable.** Periods are the two-slot blocks: 1 = 09:00–10:40, 2 = 10:45–12:25, 3 = 12:30–02:10, 4 = 02:15–03:55, 5 = 04:00–05:40. The masters already keep that period free (the preparatory one writes `أنشطة وندوات` there).
 - The tool places no office hours, advising or quality there; the cell shows `أنشطة` (grey) on the page, in Excel and in the PDF, and counts in no total — neither the day's total nor النصاب. If a master ever puts a lecture or lab there, that stays (masters win). Constant `ACTIVITY` in `src/core/rules.ts`. `DATA_VERSION` is 7.
+
+## 24. Seconded doctors — attendance timetables (client, 2026-10-16)
+- **الدكاترة المنتدبون** (doctors from other faculties teaching in the department) get their own sheet, called a **جدول تواجد**: the course table with each course's share and weeks, their lectures, and the labs/sections they supervise. **No** النصاب, totals, daily totals, office hours, advising, quality or activities.
+- Their files go in a separate folder `الدكاترة المنتدبين/` inside the Excel and PDF zips (plus `كل جداول المنتدبين.pdf`). On the page they are a separate group, and in settings a separate table where she can add or remove them; any detected name can be added as «عضو بالقسم» or «منتدب».
+- Roster entries carry `kind: 'seconded'`. Seeded (to be confirmed by the client): احمد المليجى, محمد سعيد, ايمان شوقى, بسنت سمير, عبد الوهاب العيسوى, سيد محمد احمد — all from the comms/power masters. Not seeded but possible: حمدى الشامى, احمد بكير.
+- Supervision: department doctors are assigned first exactly as before (their sheets do not change); seconded doctors then take the labs no department doctor supervises, when free — same section kept, otherwise the one with fewer such hours. `DATA_VERSION` is 8.

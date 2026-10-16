@@ -238,3 +238,8 @@ button.pdf:hover { background: #a03024; border-color: #a03024; }
 }
 
 .t-activity { background: #e3e6ea; color: #4a5563; }
+
+/* seconded doctors */
+h3.group { display: flex; align-items: center; gap: 6px; margin: 4px 0 8px; font-size: 1rem; color: var(--brand); }
+.roster.guests { min-width: 640px; }
+.chips li button + button { border-inline-start: 1px solid var(--line); }

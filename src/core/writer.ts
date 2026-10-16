@@ -82,7 +82,7 @@ export async function writeSheet(sheet: StaffSheet, settings: Settings = DEFAULT
   put('D5:K5', settings.semester, { size: 36 });
   put('B7:G8', `الإسم: ${sheet.staff.name}`, { size: 60, fill: GREY });
   put('B10', 'القسم:', { size: 36, border: 'thin' });
-  put('C10:E10', `${settings.department} (${sheet.staff.programme})`, { size: 36 });
+  put('C10:E10', (sheet.staff.programme ? `${settings.department} (${sheet.staff.programme})` : settings.department), { size: 36 });
   put('F10', 'الدرجة:', { size: 36, border: 'thin' });
   put('G10', RANK_LABEL[sheet.staff.rank], { size: 36 });
 
@@ -105,7 +105,9 @@ export async function writeSheet(sheet: StaffSheet, settings: Settings = DEFAULT
   heights({ [head - 1]: 30, [head]: 44 });
   put(`B${head}`, null, { size: 12, border: { top: 'thick', bottom: 'medium', left: 'thick', right: 'medium' } });
   TIME_LABELS.forEach((label, i) => put(`${col(2 + i)}${head}`, label, { border: { top: 'thick', left: 'medium', right: 'medium', bottom: 'medium' } }));
-  put(`M${head}`, 'المجموع', { size: 32, border: 'medium' });
+  // Attendance sheets for seconded doctors carry no totals of any kind (client, 2026-10-16).
+  const attendance = sheet.staff.kind === 'seconded';
+  put(`M${head}`, attendance ? null : 'المجموع', { size: 32, border: 'medium' });
   DAY_NAMES.forEach((name, day) => {
     const r = head + 1 + day;
     ws.getRow(r).height = 115;
@@ -125,13 +127,13 @@ export async function writeSheet(sheet: StaffSheet, settings: Settings = DEFAULT
       }
     }
     for (let s = 0; s < 10; s++) if (!taken.has(s)) put(`${col(2 + s)}${r}`, null, { size: 24, border: 'medium' });
-    put(`M${r}`, sheet.daily[day] || null, { border: 'medium' });
+    put(`M${r}`, attendance ? null : sheet.daily[day] || null, { border: 'medium' });
   });
 
   // ── Summary ──
   const sum = head + 8;
   heights({ [sum - 1]: 25, [sum]: 50, [sum + 1]: 31, [sum + 2]: 34, [sum + 5]: 40, [sum + 6]: 40 });
-  put(`C${sum - 1}:M${sum - 1}`, null, { size: 11, border: 'medium' });
+  if (!attendance) put(`C${sum - 1}:M${sum - 1}`, null, { size: 11, border: 'medium' });
   const t = sheet.totals;
   const isTa = sheet.staff.rank === 'ta';
   const columns: [string, number][] = [
@@ -141,7 +143,7 @@ export async function writeSheet(sheet: StaffSheet, settings: Settings = DEFAULT
     ['ساعات الإرشاد الأكاديمي', t.advising],
     ['الجــــــــــودة', t.quality],
   ];
-  columns.forEach(([label, value], i) => {
+  (attendance ? [] : columns).forEach(([label, value], i) => {
     const a = col(2 + i * 2);
     const b = col(3 + i * 2);
     put(`${a}${sum}:${b}${sum}`, label, { size: 36, fill: HEADER, border: 'medium' });
@@ -149,10 +151,12 @@ export async function writeSheet(sheet: StaffSheet, settings: Settings = DEFAULT
     // النصاب: the counted values; quality is left out (brief §5.4, §11.1).
     put(`${a}${sum + 2}:${b}${sum + 2}`, i < 4 ? value : null, { border: 'medium' });
   });
-  put(`M${sum}`, 'المجموع', { border: 'medium' });
-  put(`M${sum + 1}`, { formula: `SUM(C${sum + 1}:L${sum + 1})`, result: t.counted + t.quality }, { border: 'medium' });
-  put(`B${sum + 2}`, 'النصاب', { size: 32, border: 'thick' });
-  put(`M${sum + 2}`, { formula: `SUM(C${sum + 2}:J${sum + 2})`, result: t.counted }, { border: 'medium' });
+  if (!attendance) {
+    put(`M${sum}`, 'المجموع', { border: 'medium' });
+    put(`M${sum + 1}`, { formula: `SUM(C${sum + 1}:L${sum + 1})`, result: t.counted + t.quality }, { border: 'medium' });
+    put(`B${sum + 2}`, 'النصاب', { size: 32, border: 'thick' });
+    put(`M${sum + 2}`, { formula: `SUM(C${sum + 2}:J${sum + 2})`, result: t.counted }, { border: 'medium' });
+  }
 
   // ── Signatures ──
   ['B:D', 'E:G', 'I:J', 'L:M'].forEach((span, i) => {

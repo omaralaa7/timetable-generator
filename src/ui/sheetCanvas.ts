@@ -121,7 +121,7 @@ export async function drawSheet(sheet: StaffSheet, settings: Settings): Promise<
   // Right to left: القسم | programme | الدرجة | rank
   const lineY = top + 150;
   cell('القسم:', W - M - 170, lineY, 170, 70, { size: 38, line: 2 });
-  text(`${settings.department} (${sheet.staff.programme})`, infoX + 420, lineY, infoW - 590 - 20, 70, { size: 38 });
+  text((sheet.staff.programme ? `${settings.department} (${sheet.staff.programme})` : settings.department), infoX + 420, lineY, infoW - 590 - 20, 70, { size: 38 });
   cell('الدرجة:', infoX + 240, lineY, 170, 70, { size: 38, line: 2 });
   text(RANK_LABEL[sheet.staff.rank], infoX, lineY, 240, 70, { size: 38 });
 
@@ -137,7 +137,8 @@ export async function drawSheet(sheet: StaffSheet, settings: Settings): Promise<
   const slotX = (slot: number) => W - M - dayW - (slot + 1) * slotW; // slot 0 is next to the day column
   cell('', W - M - dayW, gridTop, dayW, headH, { size: 20 });
   TIME_LABELS.forEach((label, i) => cell(label, slotX(i), gridTop, slotW, headH, { size: 26, ltr: true }));
-  cell('المجموع', M, gridTop, totalW, headH, { size: 28 });
+  const attendance = sheet.staff.kind === 'seconded'; // no totals of any kind
+  cell(attendance ? '' : 'المجموع', M, gridTop, totalW, headH, { size: 28 });
   DAY_NAMES.forEach((name, day) => {
     const y = gridTop + headH + day * dayH;
     cell(name, W - M - dayW, y, dayW, dayH, { size: 30 });
@@ -159,7 +160,7 @@ export async function drawSheet(sheet: StaffSheet, settings: Settings): Promise<
       }
     }
     for (let s = 0; s < 10; s++) if (!taken.has(s)) box(slotX(s), y, slotW, dayH);
-    cell(sheet.daily[day] || '', M, y, totalW, dayH, { size: 32 });
+    cell(attendance ? '' : sheet.daily[day] || '', M, y, totalW, dayH, { size: 32 });
   });
 
   // ── Summary ──
@@ -172,17 +173,19 @@ export async function drawSheet(sheet: StaffSheet, settings: Settings): Promise<
     ['ساعات الإرشاد الأكاديمي', t.advising],
     ['الجودة', t.quality],
   ];
-  pairs.forEach(([label, value], i) => {
+  (attendance ? [] : pairs).forEach(([label, value], i) => {
     const x = slotX(2 * i + 1);
     cell(label, x, sumTop, slotW * 2, 52, { size: 32, fill: '#E4DFEC' });
     cell(value, x, sumTop + 52, slotW * 2, 44, { size: 30 });
     // النصاب: the counted values; quality is left out.
     cell(i < 4 ? value : '', x, sumTop + 96, slotW * 2, 44, { size: 30 });
   });
-  cell('المجموع', M, sumTop, totalW, 52, { size: 28 });
-  cell(t.counted + t.quality, M, sumTop + 52, totalW, 44, { size: 30 });
-  cell(t.counted, M, sumTop + 96, totalW, 44, { size: 30 });
-  cell('النصاب', W - M - dayW, sumTop + 96, dayW, 44, { size: 30 });
+  if (!attendance) {
+    cell('المجموع', M, sumTop, totalW, 52, { size: 28 });
+    cell(t.counted + t.quality, M, sumTop + 52, totalW, 44, { size: 30 });
+    cell(t.counted, M, sumTop + 96, totalW, 44, { size: 30 });
+    cell('النصاب', W - M - dayW, sumTop + 96, dayW, 44, { size: 30 });
+  }
 
   // ── Signatures (first one on the right) ──
   const signW = (W - 2 * M) / 4;

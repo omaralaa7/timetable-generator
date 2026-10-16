@@ -120,11 +120,23 @@ test('duties follow the client notes: fixed office hours, none on Saturday, TA w
 });
 
 test('Tuesday third period (12:30–02:10) is kept for activities on every sheet', () => {
-  for (const s of result.sheets) {
+  for (const s of result.sheets.filter((x) => x.staff.kind !== 'seconded')) {
     const there = s.items.filter((it) => it.day === 3 && it.slots.some((x) => x === 4 || x === 5));
     assert.deepEqual(there.map((it) => `${it.type}:${it.slots.join(',')}`), ['activity:4,5'], s.staff.name);
     // not counted: the day's total only has the other blocks
     const others = new Set(s.items.filter((it) => it.day === 3 && it.type !== 'activity').flatMap((it) => it.slots)).size;
     assert.equal(s.daily[3], others, s.staff.name);
   }
+});
+
+test('seconded doctors get an attendance sheet: lectures and supervision only', () => {
+  const seconded = result.sheets.filter((s) => s.staff.kind === 'seconded');
+  assert.ok(seconded.length >= 6);
+  for (const s of seconded) {
+    assert.deepEqual([...new Set(s.items.map((it) => it.type))].filter((t) => t !== 'lecture' && t !== 'supervision'), [], s.staff.name);
+    assert.ok(s.items.some((it) => it.type === 'lecture'), `${s.staff.name} has no lecture`);
+  }
+  // department doctors still come first: a seconded doctor never holds a lab a department doctor could take
+  const elmeligy = sheet('sec-ahmed-elmeligy');
+  assert.ok(elmeligy.courses.some((c) => c.name.includes('ELC 331')));
 });

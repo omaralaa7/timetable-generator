@@ -239,11 +239,15 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       detected.set(`${t.role}:${k}`, d);
     }
   }
-  const rosterDoctors = (s: Session) => {
+  const isSeconded = (id: string) => byId.get(id)?.kind === 'seconded';
+  /** Every listed doctor on the roster, the seconded ones included (they get their lectures too). */
+  const allDoctors = (s: Session) => {
     const ids = s.parsed.names.filter((t) => t.role === 'doctor' && t.staffId).map((t) => t.staffId!);
     for (const id of s.scannedStaff) if (byId.get(id)?.rank !== 'ta') ids.push(id);
     return [...new Set(ids)];
   };
+  /** The department's own doctors: they share the labs first; seconded doctors take what is left. */
+  const rosterDoctors = (s: Session) => allDoctors(s).filter((id) => !isSeconded(id));
 
   // ── Lectures (§5.1, §5.2). A level-1 lecture shared by two programmes is one lecture. ──
   // A course's lecture is the cell that carries its code. Power also has `اختيارى 1 (نظم القياسات)` on
@@ -275,7 +279,7 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   for (const s of unique.sort((a, b) => (a.level ?? 9) - (b.level ?? 9) || a.day - b.day || a.slots[0] - b.slots[0])) {
     const p = s.parsed;
     const doctors = p.names.filter((t) => t.role === 'doctor');
-    const mine = rosterDoctors(s);
+    const mine = allDoctors(s);
     if (!mine.length) continue;
     const ck = courseKey(p);
     let first: string | null = null; // who teaches weeks 1–7
@@ -410,6 +414,16 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
     });
     pending = pending.filter((s) => s !== open);
   }
+  // Seconded doctors take the labs and sections that no department doctor supervises, when they are free:
+  // the same doctor keeps the same section of a course, otherwise the one with fewer such hours.
+  for (const s of sections) {
+    if (supervisor.has(s.id)) continue;
+    const free = allDoctors(s).filter((id) => isSeconded(id) && !busy(id, s));
+    if (!free.length) continue;
+    const same = sections.find((x) => free.includes(supervisor.get(x.id) ?? '') && sectionOf(x) === sectionOf(s) && x.sections.join() === s.sections.join());
+    const hoursOf = (id: string) => items.get(id)!.filter((it) => it.type === 'supervision').reduce((n, it) => n + it.slots.length, 0);
+    assign(s, same ? supervisor.get(same.id)! : [...free].sort((a, b) => hoursOf(a) - hoursOf(b))[0]);
+  }
   // Sessions left in `pending` have no listed doctor free. The committee's rule (client, 2026-10-09):
   // a doctor supervises only where free and in the faculty, so these simply get no supervisor
   // from the department — it is not a problem to resolve, and nothing is reported.
@@ -421,10 +435,11 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
   const sheets = roster.map((staff): StaffSheet => {
     const mine = items.get(staff.id)!;
     const manual = decisions.duties?.[staff.id];
+    const seconded = staff.kind === 'seconded';
     if (manual) mine.push(...manual.map((d) => ({ ...d, origin: 'manual' as const })));
-    else suggestDuties(staff, mine);
-    // Whatever the masters leave free in the activities period is shown as activities.
-    const open = ACTIVITY.slots.filter((x) => staff.secondmentDay !== ACTIVITY.day && !mine.some((it) => it.day === ACTIVITY.day && it.slots.includes(x)));
+    else if (!seconded) suggestDuties(staff, mine);
+    // Whatever the masters leave free in the activities period is shown as activities (not on attendance sheets).
+    const open = seconded ? [] : ACTIVITY.slots.filter((x) => staff.secondmentDay !== ACTIVITY.day && !mine.some((it) => it.day === ACTIVITY.day && it.slots.includes(x)));
     if (open.length) mine.push({ day: ACTIVITY.day, slots: open, type: 'activity', text: ACTIVITY.text, origin: 'auto' });
     applyEdits(mine, decisions.edits?.[staff.id]);
     mine.sort((a, b) => a.day - b.day || a.slots[0] - b.slots[0]);
@@ -449,7 +464,7 @@ export function buildSheets(sessions: Session[], roster: Staff[], decisions: Dec
       minimum: MINIMUM[staff.rank],
     };
     totals.counted = totals.teaching + totals.office + totals.supervision + totals.advising;
-    if (totals.counted < totals.minimum) {
+    if (!seconded && totals.counted < totals.minimum) {
       issues.push({
         id: `min:${staff.id}`, kind: 'below-minimum', staffIds: [staff.id],
         message: `${staff.name}: النصاب ${totals.counted} من ${totals.minimum}`,

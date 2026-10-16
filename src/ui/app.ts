@@ -209,14 +209,14 @@ function personView(sheet: StaffSheet): string {
           <button data-act="pdf-one" data-id="${esc(sheet.staff.id)}" class="pdf">${icon('word')} PDF</button>
         </div>
       </div>
-      <div class="stats">
+      ${isGuest(sheet) ? '<p class="hint">جدول تواجد لدكتور منتدب: المقررات والمحاضرات والإشراف فقط — بدون نصاب أو ساعات مكتبية أو جودة.</p>' : `<div class="stats">
         ${stat(isTa ? 'تمرين / عملي' : 'المحاضرات', t.teaching)}
         ${stat('الساعات المكتبية', t.office)}
         ${stat('ساعات الإشراف', t.supervision)}
         ${stat('الإرشاد الأكاديمي', t.advising)}
         ${stat('الجودة', t.quality)}
         ${stat('النصاب (بدون الجودة)', `${t.counted} / ${t.minimum}`, t.counted < t.minimum ? 'bad' : 'good')}
-      </div>
+      </div>`}
       ${gridTable(sheet)}
       ${dayList(sheet)}
       <p class="legend"><span class="key t-lecture">محاضرة</span><span class="key t-supervision">إشراف</span><span class="key t-office">مكتبية / ارشاد / جودة</span><span class="key t-activity">أنشطة</span><span class="hint">${icon('edit', 14)} للتعديل اضغط على أي خانة</span></p>
@@ -231,15 +231,21 @@ function personView(sheet: StaffSheet): string {
     </div>`;
 }
 
+const isGuest = (s: StaffSheet) => s.staff.kind === 'seconded';
+const chips = (list: StaffSheet[], current: StaffSheet | undefined) => list.map((s) =>
+  `<button role="tab" aria-selected="${s === current}" data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${!isGuest(s) && s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)}</button>`).join('');
+
 function sheetsView(): string {
   const current = result.sheets.find((s) => s.staff.id === person) ?? result.sheets[0];
+  const dept = result.sheets.filter((s) => !isGuest(s));
+  const guests = result.sheets.filter(isGuest);
   const open = result.issues.length;
   return `
     <section>
       <div class="done">
         <span class="doneicon">${icon('check', 28)}</span>
         <div class="grow">
-          <b>تم إنشاء ${result.sheets.length} جدولاً فردياً</b>
+          <b>تم إنشاء ${dept.length} جدولاً فردياً${guests.length ? ` و${guests.length} جداول تواجد للمنتدبين` : ''}</b>
           ${open ? `<span class="hint">يوجد ${open} قرار اختياري — <button data-tab="issues" class="link">عرضها</button></span>` : '<span class="hint">كل شيء جاهز للتنزيل</span>'}
         </div>
         <div class="row downloads">
@@ -248,7 +254,9 @@ function sheetsView(): string {
         </div>
       </div>
       <h2>${icon('users', 20)} معاينة جدول عضو</h2>
-      <div class="people" role="tablist">${result.sheets.map((s) => `<button role="tab" aria-selected="${s === current}" data-act="person" data-id="${esc(s.staff.id)}" class="${s === current ? 'on' : ''} ${s.totals.counted < s.totals.minimum ? 'low' : ''}">${esc(s.staff.name)}</button>`).join('')}</div>
+      <div class="people" role="tablist">${chips(dept, current)}</div>
+      ${guests.length ? `<h3 class="group">${icon('users', 17)} الدكاترة المنتدبون <span class="hint">— جداول تواجد بدون نصاب</span></h3>
+      <div class="people" role="tablist">${chips(guests, current)}</div>` : ''}
       ${current ? personView(current) : '<p class="empty">لا يوجد أعضاء في القائمة — أضفهم من الإعدادات.</p>'}
     </section>`;
 }
@@ -276,7 +284,7 @@ function settingsView(): string {
   const s = project.settings;
   const dayOptions = (value: number | null) =>
     `<option value="">—</option>${DAY_NAMES.map((d, i) => `<option value="${i}" ${value === i ? 'selected' : ''}>${d}</option>`).join('')}`;
-  const rows = project.roster.map((st, i) => `
+  const rowOf = (st: Staff, i: number) => `
     <tr data-i="${i}">
       <td><input data-f="name" value="${esc(st.name)}" aria-label="الاسم"></td>
       <td><input data-f="aliases" value="${esc(st.aliases.join('، '))}" title="الأسماء كما تُكتب في الجداول الرئيسية، مفصولة بفاصلة" aria-label="الأسماء في الجداول"></td>
@@ -288,14 +296,22 @@ function settingsView(): string {
       <td><input type="number" min="0" max="20" data-f="officeHours" value="${st.officeHours ?? 4}" aria-label="الساعات المكتبية"></td>
       <td><input type="number" min="0" max="20" data-f="advisingHours" value="${st.advisingHours ?? 4}" ${st.advising ? '' : 'disabled'} aria-label="ساعات الإرشاد"></td>
       <td><button data-act="remove-staff" data-i="${i}" class="iconbtn danger" title="حذف العضو" aria-label="حذف ${esc(st.name)}">${icon('trash', 16)}</button></td>
-    </tr>`).join('');
+    </tr>`;
+  const rows = project.roster.map((st, i) => (st.kind === 'seconded' ? '' : rowOf(st, i))).join('');
+  const guestRows = project.roster.map((st, i) => (st.kind !== 'seconded' ? '' : `
+    <tr data-i="${i}">
+      <td><input data-f="name" value="${esc(st.name)}" aria-label="الاسم"></td>
+      <td><input data-f="aliases" value="${esc(st.aliases.join('، '))}" aria-label="الأسماء في الجداول"></td>
+      <td><select data-f="rank" aria-label="الدرجة">${(['professor', 'associate', 'lecturer'] as Rank[]).map((r) => `<option value="${r}" ${st.rank === r ? 'selected' : ''}>${RANKS[r]}</option>`).join('')}</select></td>
+      <td><button data-act="remove-staff" data-i="${i}" class="iconbtn danger" title="حذف" aria-label="حذف ${esc(st.name)}">${icon('trash', 16)}</button></td>
+    </tr>`)).join('');
   const detected = result.detected.filter((d) => d.role === 'doctor' || d.count > 2);
   return `
     <section>
       <h2>${icon('settings', 20)} الإعدادات</h2>
       <p class="lead">لا تحتاج هذه الصفحة في الاستخدام العادي. استخدمها عند تغيّر أعضاء القسم أو بيانات التوقيعات.</p>
       <details class="card" open>
-        <summary>${icon('users')} أعضاء القسم <span class="badge soft">${project.roster.length}</span></summary>
+        <summary>${icon('users')} أعضاء القسم <span class="badge soft">${project.roster.filter((x) => x.kind !== 'seconded').length}</span></summary>
         <p class="hint">فقط من في هذه القائمة يصدر له جدول.</p>
         <div class="scroll"><table class="roster">
           <thead><tr><th>الاسم على الجدول</th><th>الاسم كما يُكتب في الجداول الرئيسية</th><th>البرنامج</th><th>الدرجة</th><th>مرشد</th><th>الانتداب</th><th>جودة</th><th>مكتبية</th><th>ارشاد</th><th></th></tr></thead>
@@ -304,7 +320,16 @@ function settingsView(): string {
         <button data-act="add-staff">${icon('plus', 16)} إضافة عضو</button>
         ${detected.length ? `<details><summary class="small">أسماء في الجداول الرئيسية ليست في القائمة (${detected.length})</summary>
           <p class="hint">أضف من هو من القسم فقط؛ الباقون يُتجاهلون.</p>
-          <ul class="chips">${detected.map((d) => `<li>${esc(d.name)} <button data-act="add-detected" data-name="${esc(d.name)}" data-role="${d.role}">إضافة</button></li>`).join('')}</ul></details>` : ''}
+          <ul class="chips">${detected.map((d) => `<li>${esc(d.name)} <button data-act="add-detected" data-name="${esc(d.name)}" data-role="${d.role}">عضو بالقسم</button>${d.role === 'doctor' ? `<button data-act="add-detected" data-name="${esc(d.name)}" data-role="doctor" data-kind="seconded">منتدب</button>` : ''}</li>`).join('')}</ul></details>` : ''}
+      </details>
+      <details class="card">
+        <summary>${icon('users')} الدكاترة المنتدبون <span class="badge soft">${project.roster.filter((x) => x.kind === 'seconded').length}</span></summary>
+        <p class="hint">دكاترة من خارج الكلية يدرّسون في القسم. يصدر لهم جدول تواجد فقط (المقررات والمحاضرات والإشراف) في مجلد مستقل باسم «الدكاترة المنتدبين». يأخذون المعامل التي لا يشرف عليها أحد من أعضاء القسم.</p>
+        <div class="scroll"><table class="roster guests">
+          <thead><tr><th>الاسم على الجدول</th><th>الاسم كما يُكتب في الجداول الرئيسية</th><th>الدرجة</th><th></th></tr></thead>
+          <tbody>${guestRows}</tbody>
+        </table></div>
+        <button data-act="add-guest">${icon('plus', 16)} إضافة دكتور منتدب</button>
       </details>
       <details class="card">
         <summary>${icon('edit')} بيانات تظهر في كل جدول (الفصل الدراسي والتوقيعات)</summary>
@@ -412,10 +437,13 @@ async function downloadOne(id: string): Promise<void> {
 
 async function downloadAll(): Promise<void> {
   const zip = new JSZip();
-  for (const sheet of result.sheets) zip.file(sheetFileName(sheet), await writeSheet(sheet, project.settings));
+  for (const sheet of result.sheets) zip.file(folderOf(sheet) + sheetFileName(sheet), await writeSheet(sheet, project.settings));
   download('الجداول الفردية.zip', await zip.generateAsync({ type: 'blob' }), 'application/zip');
 }
 
+/** Seconded doctors' sheets go in a folder of their own (client, 2026-10-16). */
+const GUEST_FOLDER = 'الدكاترة المنتدبين/';
+const folderOf = (sheet: StaffSheet) => (isGuest(sheet) ? GUEST_FOLDER : '');
 const pdfName = (sheet: StaffSheet) => sheetFileName(sheet).replace(/\.xlsx$/, '.pdf');
 
 async function pdfOne(id: string): Promise<void> {
@@ -427,13 +455,15 @@ async function pdfOne(id: string): Promise<void> {
 /** Every sheet as its own PDF, plus one PDF with all of them for printing in one go. */
 async function pdfAll(): Promise<void> {
   const zip = new JSZip();
-  const pages = [];
+  const pages: Awaited<ReturnType<typeof sheetPage>>[] = [];
+  const guestPages: typeof pages = [];
   for (const sheet of result.sheets) {
     const page = await sheetPage(sheet, project.settings);
-    pages.push(page);
-    zip.file(pdfName(sheet), imagesToPdf([page]));
+    (isGuest(sheet) ? guestPages : pages).push(page);
+    zip.file(folderOf(sheet) + pdfName(sheet), imagesToPdf([page]));
   }
-  zip.file('كل الجداول الفردية.pdf', imagesToPdf(pages));
+  if (pages.length) zip.file('كل الجداول الفردية.pdf', imagesToPdf(pages));
+  if (guestPages.length) zip.file(GUEST_FOLDER + 'كل جداول المنتدبين.pdf', imagesToPdf(guestPages));
   download('الجداول الفردية PDF.zip', await zip.generateAsync({ type: 'blob' }), 'application/zip');
 }
 
@@ -446,17 +476,22 @@ function editCourses(change: (rows: StaffSheet['courses']) => void): void {
   commit();
 }
 
-function newStaff(name = '', role: 'doctor' | 'ta' = 'doctor'): Staff {
+function newStaff(name = '', role: 'doctor' | 'ta' = 'doctor', kind: Staff['kind'] = 'staff'): Staff {
   const bare = name.replace(/^[^\s]+\s/, '');
+  const guest = kind === 'seconded';
   return {
     id: `staff-${Date.now().toString(36)}`,
+    kind,
     name: name ? `${role === 'ta' ? 'م' : 'د'}/${bare}` : '',
     aliases: bare ? [bare] : [],
     programme: project.roster[0]?.programme ?? '',
     rank: role === 'ta' ? 'ta' : /^ا\.?\s*د/.test(name) ? 'professor' : /م\.?\s*د/.test(name) ? 'associate' : 'lecturer',
-    advising: true,
+    advising: !guest,
     secondmentDay: null,
-    qualityHours: 2,
+    qualityHours: guest ? 0 : 2,
+    officeHours: guest ? 0 : 4,
+    advisingHours: guest ? 0 : 4,
+    ...(guest ? { programme: '' } : {}),
   };
 }
 
@@ -481,8 +516,11 @@ root.addEventListener('click', (e) => {
       project.roster.push(newStaff());
       return commit();
     case 'add-detected':
-      project.roster.push(newStaff(el.dataset.name, el.dataset.role as 'doctor' | 'ta'));
-      return commit('تمت الإضافة — راجع الدرجة والبرنامج ويوم الانتداب');
+      project.roster.push(newStaff(el.dataset.name, el.dataset.role as 'doctor' | 'ta', el.dataset.kind === 'seconded' ? 'seconded' : 'staff'));
+      return commit(el.dataset.kind === 'seconded' ? 'تمت الإضافة إلى الدكاترة المنتدبين' : 'تمت الإضافة — راجع الدرجة والبرنامج ويوم الانتداب');
+    case 'add-guest':
+      project.roster.push(newStaff('', 'doctor', 'seconded'));
+      return commit();
     case 'remove-staff':
       if (confirm(`حذف ${project.roster[index].name}؟`)) {
         project.roster.splice(index, 1);

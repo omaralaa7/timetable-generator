@@ -4,6 +4,11 @@ import type { Rank, Session } from './types.ts';
 
 export interface Staff {
   id: string;
+  /**
+   * `seconded` (منتدب): a doctor from another faculty who teaches in the department. Their sheet is an
+   * attendance timetable only — courses, lectures and supervision; no duties, totals or النصاب.
+   */
+  kind?: 'staff' | 'seconded';
   /** Name as printed on the sheet. */
   name: string;
   /** Spelling variants found in the masters, without the title. */
@@ -63,11 +68,26 @@ const HOURS: Record<string, [number, number, number]> = {
   'eman-awad': [4, 4, 2], 'tamer-elsharkawy': [0, 8, 0],
 };
 
+/**
+ * Seconded doctors (client, 2026-10-16): from other faculties, teaching in the comms and power programmes.
+ * Proposed from the masters; the client confirms the list in the settings step.
+ */
+const SECONDED: { id: string; name: string; aliases: string[]; rank: Rank }[] = [
+  { id: 'sec-ahmed-elmeligy', name: 'ا.م.د/ احمد المليجى', aliases: ['احمد المليجى'], rank: 'associate' },
+  { id: 'sec-mohamed-said', name: 'د/ محمد سعيد', aliases: ['محمد سعيد'], rank: 'lecturer' },
+  { id: 'sec-eman-shawky', name: 'د/ ايمان شوقى', aliases: ['ايمان شوقى'], rank: 'lecturer' },
+  { id: 'sec-basant-samir', name: 'د/ بسنت سمير', aliases: ['بسنت سمير'], rank: 'lecturer' },
+  { id: 'sec-abdelwahab-elesawy', name: 'ا.د/ عبد الوهاب العيسوى', aliases: ['عبد الوهاب العيسوى', 'عبد الوهاي العيسوى', 'عبد الوهاب'], rank: 'professor' },
+  { id: 'sec-sayed-mohamed', name: 'د/ سيد محمد احمد', aliases: ['سيد محمد احمد'], rank: 'lecturer' },
+];
+
 /** Seed roster from brief §6 and the hand-made sheets. Editable in the UI; this is only the starting point. */
-export const SEED_ROSTER: Staff[] = BASE.map((staff) => {
+export const SEED_ROSTER: Staff[] = BASE.map((staff): Staff => {
   const [officeHours, advisingHours, qualityHours] = HOURS[staff.id] ?? [4, 4, 2];
-  return { ...staff, advising: advisingHours > 0, officeHours, advisingHours, qualityHours, presets: SEED_PRESETS[staff.id] ?? [] };
-});
+  return { ...staff, kind: 'staff' as const, advising: advisingHours > 0, officeHours, advisingHours, qualityHours, presets: SEED_PRESETS[staff.id] ?? [] };
+}).concat(SECONDED.map((s) => ({
+  ...s, kind: 'seconded' as const, programme: '', advising: false, secondmentDay: null, qualityHours: 0, officeHours: 0, advisingHours: 0, presets: [],
+})));
 
 /**
  * Fill `staffId` on every name token by exact alias match (letters only), then
